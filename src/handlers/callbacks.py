@@ -76,12 +76,8 @@ async def handle_settings_callback(cb: CallbackQuery) -> None:
         return
 
     parts = cb.data.split(":")
-    if len(parts) < 3:
-        await cb.answer()
-        return
-
     user_id = cb.from_user.id
-    setting = parts[1]
+    setting = parts[1] if len(parts) > 1 else ""
 
     from src.db import users as db_users
     user = await db_users.get_user(user_id)
