@@ -1,0 +1,10 @@
+services:
+  prayer-bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - prayer_bot_data:/app/data
+
+volumes:
+  prayer_bot_data:
