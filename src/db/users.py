@@ -62,6 +62,24 @@ async def update_calc_method(user_id: int, method: int) -> None:
         await db.commit()
 
 
+async def update_isha_window(user_id: int, isha_window: str) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET isha_window = ?, updated_at = datetime('now') WHERE user_id = ?",
+            (isha_window, user_id),
+        )
+        await db.commit()
+
+
+async def update_reminder_interval(user_id: int, minutes: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET reminder_interval = ?, updated_at = datetime('now') WHERE user_id = ?",
+            (minutes, user_id),
+        )
+        await db.commit()
+
+
 async def update_reminders(user_id: int, reminders_on: bool) -> None:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(

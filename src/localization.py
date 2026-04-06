@@ -34,7 +34,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "did_you_pray_sobh": "🌅 Fajr time has passed (sun has risen).\nDid you pray <b>Sobh</b> (make-up)? 🤲",
         "prayer_confirmed": "✅ <b>{prayer}</b> logged. Alhamdulillah! 🌟",
         "prayer_confirmed_qadaa": "✅ <b>Sobh</b> (make-up) logged. Alhamdulillah! 🌟",
-        "reminder_continuing": "We'll remind you again in 5 minutes.",
+        "reminder_continuing": "We'll remind you again in {minutes} min.",
 
         # /today
         "today_header": "📅 <b>Today's Prayers</b> — {date}\n\n",
@@ -64,9 +64,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "settings_reminders": "🔔 Reminders",
         "settings_on": "On ✅",
         "settings_off": "Off ❌",
+        "settings_isha_window": "⏰ Isha Window",
+        "settings_interval": "🔁 Repeat Every",
         "settings_saved": "✅ Settings saved.",
         "settings_method_prompt": "Choose a calculation method:",
         "settings_lang_prompt": "Choose your language:",
+        "settings_isha_prompt": "When should Isha reminders stop?",
+        "settings_interval_prompt": "How often should I remind you?",
 
         # /pause /resume
         "paused": "⏸ Reminders paused. Use /resume to turn them back on.",
@@ -116,7 +120,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "did_you_pray_sobh": "🌅 انتهى وقت الفجر (الشمس أشرقت).\nهل صلّيت <b>الصبح</b> (قضاء)؟ 🤲",
         "prayer_confirmed": "✅ تم تسجيل صلاة <b>{prayer}</b>. الحمد لله! 🌟",
         "prayer_confirmed_qadaa": "✅ تم تسجيل <b>الصبح</b> قضاءً. الحمد لله! 🌟",
-        "reminder_continuing": "سنذكّرك مرة أخرى بعد 5 دقائق.",
+        "reminder_continuing": "سنذكّرك مرة أخرى بعد {minutes} دقيقة.",
 
         # /today
         "today_header": "📅 <b>صلوات اليوم</b> — {date}\n\n",
@@ -146,9 +150,13 @@ STRINGS: dict[str, dict[str, str]] = {
         "settings_reminders": "🔔 التنبيهات",
         "settings_on": "مفعّلة ✅",
         "settings_off": "متوقفة ❌",
+        "settings_isha_window": "⏰ وقت العشاء",
+        "settings_interval": "🔁 تكرار كل",
         "settings_saved": "✅ تم حفظ الإعدادات.",
         "settings_method_prompt": "اختر طريقة حساب المواقيت:",
         "settings_lang_prompt": "اختر لغتك:",
+        "settings_isha_prompt": "متى تتوقف تذكيرات العشاء؟",
+        "settings_interval_prompt": "كم مرة تريد أن أذكّرك؟",
 
         # /pause /resume
         "paused": "⏸ تم إيقاف التنبيهات. استخدم /resume لإعادة تفعيلها.",

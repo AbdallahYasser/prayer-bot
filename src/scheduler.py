@@ -301,8 +301,12 @@ async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> Non
     task_key = f"{user_id}_{prayer}_{date_str}"
 
     try:
+        # Read interval once at loop start; re-read user each iteration in case settings change
+        _user_init = await db_users.get_user(user_id)
+        interval_sec = (_user_init.get("reminder_interval") or 5) * 60 if _user_init else 300
+
         while True:
-            await asyncio.sleep(300)  # 5 minutes
+            await asyncio.sleep(interval_sec)
 
             status = await db_log.get_status(user_id, date_str, prayer)
             if status in ("prayed", "missed"):
@@ -311,6 +315,9 @@ async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> Non
             user = await db_users.get_user(user_id)
             if not user or not user.get("reminders_on"):
                 break
+
+            # Refresh interval in case user changed it mid-loop
+            interval_sec = (user.get("reminder_interval") or 5) * 60
 
             # Check if the window has fully closed
             if await _is_window_closed(user_id, prayer, date_str, user):
@@ -374,6 +381,11 @@ async def _is_window_closed(user_id: int, prayer: str, date_str: str, user: dict
         naive = datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
         return tz.localize(naive)
 
+    def _aware_on(time_str: str, on_date: str, on_tz) -> datetime.datetime:
+        h, m = map(int, time_str.split(":"))
+        naive = datetime.datetime.strptime(f"{on_date} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
+        return on_tz.localize(naive)
+
     if prayer == "Fajr":
         # Fajr/Sobh window fully closes at Dhuhr.
         # Before Sunrise = pray as Fajr (أداء).
@@ -384,9 +396,34 @@ async def _is_window_closed(user_id: int, prayer: str, date_str: str, user: dict
     next_prayer_idx = PRAYERS.index(prayer) + 1
 
     if next_prayer_idx >= len(PRAYERS):
-        # Isha: window closes 30 minutes after Isha time
-        window_end = _aware(times.get("Isha", "00:00")) + datetime.timedelta(minutes=30)
-        return now > window_end
+        # Isha — use the user's configured isha_window setting
+        from src.db import prayer_times as db_pt2
+        isha_window = user.get("isha_window") or "midnight"
+        isha_dt = _aware(times.get("Isha", "00:00"))
+
+        if isha_window == "midnight":
+            # 00:00 in user's timezone (start of next calendar day)
+            next_day = (datetime.datetime.strptime(date_str, "%Y-%m-%d") + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+            midnight = tz.localize(datetime.datetime.strptime(f"{next_day} 00:00", "%Y-%m-%d %H:%M"))
+            return now >= midnight
+
+        elif isha_window == "fajr":
+            # Until next day's Fajr time
+            next_day = (datetime.datetime.strptime(date_str, "%Y-%m-%d") + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+            tomorrow_times = await db_pt2.get_prayer_times(user_id, next_day)
+            if tomorrow_times and tomorrow_times.get("Fajr"):
+                return now >= _aware_on(tomorrow_times["Fajr"], next_day, tz)
+            # Fallback: midnight + 5 hours
+            next_day_dt = tz.localize(datetime.datetime.strptime(f"{next_day} 05:00", "%Y-%m-%d %H:%M"))
+            return now >= next_day_dt
+
+        else:
+            # N minutes after Isha
+            try:
+                minutes = int(isha_window)
+            except ValueError:
+                minutes = 30
+            return now > isha_dt + datetime.timedelta(minutes=minutes)
     else:
         next_prayer = PRAYERS[next_prayer_idx]
         return now >= _aware(times.get(next_prayer, "00:00"))

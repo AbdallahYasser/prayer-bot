@@ -21,6 +21,21 @@ PRAYER_NAMES: dict[str, dict[str, str]] = {
     "Isha":    {"en": "Isha",    "ar": "العشاء"},
 }
 
+# Isha window options — value stored in DB as string
+# "midnight" = closes at 00:00 user's timezone
+# "fajr"     = closes at next day's Fajr time
+# "60","120","180" = closes N minutes after Isha time
+ISHA_WINDOW_OPTIONS: dict[str, dict[str, str]] = {
+    "midnight": {"en": "Until Midnight",        "ar": "حتى منتصف الليل"},
+    "fajr":     {"en": "Until Fajr (next day)",  "ar": "حتى الفجر (اليوم التالي)"},
+    "60":       {"en": "1 hour after Isha",      "ar": "ساعة بعد العشاء"},
+    "120":      {"en": "2 hours after Isha",     "ar": "ساعتان بعد العشاء"},
+    "180":      {"en": "3 hours after Isha",     "ar": "3 ساعات بعد العشاء"},
+}
+
+# Reminder repeat interval options (minutes)
+REMINDER_INTERVALS: list[int] = [1, 2, 3, 5, 10, 15, 30]
+
 # Aladhan calculation methods
 CALC_METHODS: dict[int, str] = {
     1: "University of Islamic Sciences, Karachi",

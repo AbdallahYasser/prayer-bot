@@ -16,7 +16,7 @@ from aiogram.types import CallbackQuery
 
 from src import state
 from src.localization import t, prayer_name
-from src.config import ALLOWED_USERS, CALC_METHODS
+from src.config import ALLOWED_USERS, CALC_METHODS, ISHA_WINDOW_OPTIONS, REMINDER_INTERVALS
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -82,8 +82,9 @@ async def handle_prayer_callback(cb: CallbackQuery) -> None:
         await cb.answer()
 
     elif answer == "no":
-        # Don't cancel the task — loop continues every 5 min
-        await cb.answer(t(lang, "reminder_continuing"), show_alert=False)
+        # Don't cancel the task — loop continues at user's interval
+        minutes = (user or {}).get("reminder_interval") or 5
+        await cb.answer(t(lang, "reminder_continuing").format(minutes=minutes), show_alert=False)
 
     else:
         await cb.answer()
@@ -178,6 +179,52 @@ async def handle_settings_callback(cb: CallbackQuery) -> None:
             pass
         await cb.answer()
 
+    elif setting == "show_isha":
+        try:
+            await cb.message.edit_text(
+                t(lang, "settings_isha_prompt"),
+                reply_markup=_build_isha_keyboard(lang),
+            )
+        except Exception:
+            pass
+        await cb.answer()
+
+    elif setting == "isha":
+        new_isha = parts[2]
+        await db_users.update_isha_window(user_id, new_isha)
+        await cb.answer(t(lang, "settings_saved"), show_alert=False)
+        updated_user = await db_users.get_user(user_id)
+        try:
+            await cb.message.edit_text(
+                _build_settings_text(updated_user),
+                reply_markup=_build_settings_keyboard(updated_user),
+            )
+        except Exception:
+            pass
+
+    elif setting == "show_interval":
+        try:
+            await cb.message.edit_text(
+                t(lang, "settings_interval_prompt"),
+                reply_markup=_build_interval_keyboard(),
+            )
+        except Exception:
+            pass
+        await cb.answer()
+
+    elif setting == "interval":
+        new_interval = int(parts[2])
+        await db_users.update_reminder_interval(user_id, new_interval)
+        await cb.answer(t(lang, "settings_saved"), show_alert=False)
+        updated_user = await db_users.get_user(user_id)
+        try:
+            await cb.message.edit_text(
+                _build_settings_text(updated_user),
+                reply_markup=_build_settings_keyboard(updated_user),
+            )
+        except Exception:
+            pass
+
     else:
         await cb.answer()
 
@@ -191,15 +238,20 @@ def _build_settings_text(user: dict, language_override: str | None = None) -> st
     reminders_on = user.get("reminders_on", 1)
     method_id = user.get("calc_method", 5)
     method_name = CALC_METHODS.get(method_id, str(method_id))
+    isha_window = user.get("isha_window") or "midnight"
+    interval = user.get("reminder_interval") or 5
 
     reminders_label = t(lang, "settings_on") if reminders_on else t(lang, "settings_off")
     lang_label = "العربية 🇪🇬" if lang == "ar" else "English 🇬🇧"
+    isha_label = ISHA_WINDOW_OPTIONS.get(isha_window, {}).get(lang, isha_window)
 
     return (
         f"{t(lang, 'settings_header')}\n\n"
         f"🌐 {t(lang, 'settings_lang')}: <b>{lang_label}</b>\n"
         f"🔢 {t(lang, 'settings_method')}: <b>{method_name}</b>\n"
-        f"🔔 {t(lang, 'settings_reminders')}: <b>{reminders_label}</b>"
+        f"🔔 {t(lang, 'settings_reminders')}: <b>{reminders_label}</b>\n"
+        f"⏰ {t(lang, 'settings_isha_window')}: <b>{isha_label}</b>\n"
+        f"🔁 {t(lang, 'settings_interval')}: <b>{interval} min</b>"
     )
 
 
@@ -216,6 +268,8 @@ def _build_settings_keyboard(user: dict, language_override: str | None = None):
         [InlineKeyboardButton(text=f"🌐 {t(lang, 'settings_lang')}", callback_data="settings:show_langs")],
         [InlineKeyboardButton(text=f"🔢 {t(lang, 'settings_method')}", callback_data="settings:show_methods")],
         [InlineKeyboardButton(text=toggle_label, callback_data=f"settings:reminders:{toggle_val}")],
+        [InlineKeyboardButton(text=f"⏰ {t(lang, 'settings_isha_window')}", callback_data="settings:show_isha")],
+        [InlineKeyboardButton(text=f"🔁 {t(lang, 'settings_interval')}", callback_data="settings:show_interval")],
     ])
 
 
@@ -250,3 +304,28 @@ def _build_lang_keyboard():
         InlineKeyboardButton(text="English 🇬🇧", callback_data="settings:lang:en"),
         InlineKeyboardButton(text="العربية 🇪🇬", callback_data="settings:lang:ar"),
     ]])
+
+
+def _build_isha_keyboard(lang: str):
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+    buttons = [
+        [InlineKeyboardButton(
+            text=opts.get(lang, opts["en"]),
+            callback_data=f"settings:isha:{key}",
+        )]
+        for key, opts in ISHA_WINDOW_OPTIONS.items()
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def _build_interval_keyboard():
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+    row = [
+        InlineKeyboardButton(text=f"{m} min", callback_data=f"settings:interval:{m}")
+        for m in REMINDER_INTERVALS
+    ]
+    # Split into rows of 4
+    buttons = [row[i:i+4] for i in range(0, len(row), 4)]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

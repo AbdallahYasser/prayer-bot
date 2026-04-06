@@ -18,19 +18,21 @@ logger = logging.getLogger(__name__)
 
 _CREATE_USERS = """
 CREATE TABLE IF NOT EXISTS users (
-    user_id       INTEGER PRIMARY KEY,
-    username      TEXT,
-    first_name    TEXT,
-    language      TEXT    NOT NULL DEFAULT 'en',
-    lat           REAL,
-    lng           REAL,
-    city          TEXT,
-    country       TEXT,
-    timezone      TEXT    NOT NULL DEFAULT 'UTC',
-    calc_method   INTEGER NOT NULL DEFAULT 5,
-    reminders_on  INTEGER NOT NULL DEFAULT 1,
-    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+    user_id            INTEGER PRIMARY KEY,
+    username           TEXT,
+    first_name         TEXT,
+    language           TEXT    NOT NULL DEFAULT 'en',
+    lat                REAL,
+    lng                REAL,
+    city               TEXT,
+    country            TEXT,
+    timezone           TEXT    NOT NULL DEFAULT 'UTC',
+    calc_method        INTEGER NOT NULL DEFAULT 5,
+    reminders_on       INTEGER NOT NULL DEFAULT 1,
+    isha_window        TEXT    NOT NULL DEFAULT 'midnight',
+    reminder_interval  INTEGER NOT NULL DEFAULT 5,
+    created_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at         TEXT    NOT NULL DEFAULT (datetime('now'))
 )
 """
 
@@ -70,11 +72,16 @@ async def init_db() -> None:
         await db.execute(_CREATE_USERS)
         await db.execute(_CREATE_PRAYER_TIMES)
         await db.execute(_CREATE_PRAYER_LOG)
-        # Migration: add sunrise column if it doesn't exist yet
-        try:
-            await db.execute("ALTER TABLE prayer_times ADD COLUMN sunrise TEXT")
-        except Exception:
-            pass  # column already exists
+        # Migrations: add new columns to existing databases
+        for migration in [
+            "ALTER TABLE prayer_times ADD COLUMN sunrise TEXT",
+            "ALTER TABLE users ADD COLUMN isha_window TEXT NOT NULL DEFAULT 'midnight'",
+            "ALTER TABLE users ADD COLUMN reminder_interval INTEGER NOT NULL DEFAULT 5",
+        ]:
+            try:
+                await db.execute(migration)
+            except Exception:
+                pass  # column already exists
         await db.commit()
     logger.info("Database initialized at %s", DB_PATH)
 
