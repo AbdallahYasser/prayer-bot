@@ -250,9 +250,15 @@ async def _send_prayer_ask(user_id: int, prayer: str, date_str: str) -> None:
         state.active_reminder_tasks[task_key] = task
 
 
-async def _send_ask_message(bot, user_id: int, prayer: str, date_str: str, p_name: str, lang: str) -> None:
-    """Send the 'Did you pray?' message with Yes/No inline keyboard."""
+async def _send_ask_message(
+    bot, user_id: int, prayer: str, date_str: str,
+    p_name: str, lang: str, is_sobh: bool = False,
+) -> None:
+    """Send the 'Did you pray?' message with Yes/No inline keyboard.
+    is_sobh=True switches to the قضاء (make-up) message for Fajr after Sunrise.
+    """
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    from src.localization import t
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
@@ -265,8 +271,10 @@ async def _send_ask_message(bot, user_id: int, prayer: str, date_str: str, p_nam
         ),
     ]])
 
-    from src.localization import t
-    text = t(lang, "did_you_pray").format(prayer=p_name)
+    if is_sobh:
+        text = t(lang, "did_you_pray_sobh")
+    else:
+        text = t(lang, "did_you_pray").format(prayer=p_name)
 
     try:
         await bot.send_message(user_id, text, reply_markup=keyboard)
@@ -277,8 +285,12 @@ async def _send_ask_message(bot, user_id: int, prayer: str, date_str: str, p_nam
 async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> None:
     """
     Runs as an asyncio.Task.
-    Every 5 minutes: check if still pending → if next prayer has arrived → mark missed and stop.
-    Otherwise, resend the 'Did you pray?' message.
+    Every 5 minutes: check if still pending → if window closed → mark missed and stop.
+    Otherwise, resend the ask message.
+
+    Special Fajr logic:
+      - Before Sunrise → ask "Did you pray Fajr?" (أداء)
+      - After Sunrise  → ask "Did you pray الصبح?" (قضاء) — still until Dhuhr
     """
     from src.bot_instance import bot
     from src.db import users as db_users
@@ -300,7 +312,7 @@ async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> Non
             if not user or not user.get("reminders_on"):
                 break
 
-            # Check if the next prayer's time has passed → window is closed
+            # Check if the window has fully closed
             if await _is_window_closed(user_id, prayer, date_str, user):
                 await db_log.update_status(user_id, date_str, prayer, "missed")
                 logger.info("Marked %s as missed for user %d on %s", prayer, user_id, date_str)
@@ -308,7 +320,25 @@ async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> Non
 
             lang = user.get("language", "en")
             p_name = prayer_name(prayer, lang)
-            await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang)
+
+            # For Fajr: check if we're past Sunrise → switch to Sobh/قضاء message
+            is_sobh = False
+            if prayer == "Fajr":
+                times = await db_pt.get_prayer_times(user_id, date_str)
+                sunrise_str = times.get("Sunrise") if times else None
+                if sunrise_str:
+                    tz_str = user.get("timezone") or "UTC"
+                    try:
+                        tz = pytz.timezone(tz_str)
+                    except Exception:
+                        tz = pytz.UTC
+                    h, m = map(int, sunrise_str.split(":"))
+                    sunrise_aware = tz.localize(
+                        datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
+                    )
+                    is_sobh = datetime.datetime.now(tz) >= sunrise_aware
+
+            await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang, is_sobh=is_sobh)
 
     except asyncio.CancelledError:
         pass  # Task cancelled because user tapped ✅ Yes
@@ -345,11 +375,10 @@ async def _is_window_closed(user_id: int, prayer: str, date_str: str, user: dict
         return tz.localize(naive)
 
     if prayer == "Fajr":
-        # Fajr window closes at Sunrise
-        sunrise_str = times.get("Sunrise")
-        if sunrise_str:
-            return now >= _aware(sunrise_str)
-        # Fallback: use Dhuhr if Sunrise not stored
+        # Fajr/Sobh window fully closes at Dhuhr.
+        # Before Sunrise = pray as Fajr (أداء).
+        # After Sunrise until Dhuhr = pray as Sobh/makeup (قضاء).
+        # The repeat loop handles the message change at Sunrise.
         return now >= _aware(times.get("Dhuhr", "12:00"))
 
     next_prayer_idx = PRAYERS.index(prayer) + 1

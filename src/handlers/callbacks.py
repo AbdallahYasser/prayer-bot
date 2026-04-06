@@ -53,9 +53,29 @@ async def handle_prayer_callback(cb: CallbackQuery) -> None:
 
         await db_log.update_status(user_id, date_str, prayer, "prayed")
 
-        # Edit the message to show confirmation
+        # For Fajr: check if confirmed after Sunrise → use قضاء confirmation message
+        confirmed_text = t(lang, "prayer_confirmed").format(prayer=p_name)
+        if prayer == "Fajr":
+            from src.db import prayer_times as db_pt
+            import datetime, pytz
+            times = await db_pt.get_prayer_times(user_id, date_str)
+            sunrise_str = times.get("Sunrise") if times else None
+            if sunrise_str:
+                user2 = await db_users.get_user(user_id)
+                tz_str = (user2 or {}).get("timezone") or "UTC"
+                try:
+                    tz = pytz.timezone(tz_str)
+                except Exception:
+                    tz = pytz.UTC
+                h, m = map(int, sunrise_str.split(":"))
+                sunrise_aware = tz.localize(
+                    datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
+                )
+                if datetime.datetime.now(tz) >= sunrise_aware:
+                    confirmed_text = t(lang, "prayer_confirmed_qadaa")
+
         try:
-            await cb.message.edit_text(t(lang, "prayer_confirmed").format(prayer=p_name))
+            await cb.message.edit_text(confirmed_text)
         except Exception:
             pass  # message may be too old to edit
 

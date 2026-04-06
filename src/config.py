@@ -14,7 +14,7 @@ ALLOWED_USERS: set[int] = {int(x.strip()) for x in _raw.split(",") if x.strip().
 PRAYERS: list[str] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
 PRAYER_NAMES: dict[str, dict[str, str]] = {
-    "Fajr":    {"en": "Fajr",    "ar": "الفجر (الصبح)"},
+    "Fajr":    {"en": "Fajr",    "ar": "الفجر"},
     "Dhuhr":   {"en": "Dhuhr",   "ar": "الظهر"},
     "Asr":     {"en": "Asr",     "ar": "العصر"},
     "Maghrib": {"en": "Maghrib", "ar": "المغرب"},
