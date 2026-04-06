@@ -7,9 +7,10 @@ Two fetch strategies:
   2. fetch_by_city(city, country, method, date_str) — city-level fallback
 
 Both return:
-  {"Fajr": "04:32", "Dhuhr": "12:01", "Asr": "15:44",
+  {"Fajr": "04:32", "Sunrise": "06:01", "Dhuhr": "12:01", "Asr": "15:44",
    "Maghrib": "18:21", "Isha": "19:51", "timezone": "Africa/Cairo"}
 or None on any error.
+Sunrise is included so the scheduler can use it as the Fajr window close time.
 """
 
 import logging
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.aladhan.com/v1"
 PRAYER_KEYS = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+EXTRA_KEYS  = ["Sunrise"]   # stored for window calculations (Fajr closes at Sunrise)
 
 
 def _strip_suffix(time_str: str) -> str:
@@ -28,11 +30,11 @@ def _strip_suffix(time_str: str) -> str:
 
 
 def _parse_response(data: dict) -> dict | None:
-    """Extract prayer times and timezone from Aladhan response data dict."""
+    """Extract prayer times, Sunrise and timezone from Aladhan response data dict."""
     try:
         timings = data["timings"]
         timezone = data["meta"]["timezone"]
-        result = {k: _strip_suffix(timings[k]) for k in PRAYER_KEYS}
+        result = {k: _strip_suffix(timings[k]) for k in PRAYER_KEYS + EXTRA_KEYS}
         result["timezone"] = timezone
         return result
     except (KeyError, TypeError) as e:

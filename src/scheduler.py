@@ -319,7 +319,11 @@ async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> Non
 async def _is_window_closed(user_id: int, prayer: str, date_str: str, user: dict) -> bool:
     """
     Returns True if the reminder window for this prayer has closed.
-    Window closes when the NEXT prayer's time has passed (or midnight for Isha).
+
+    Window rules:
+      Fajr    → closes at Sunrise (شروق) — you cannot pray Fajr after the sun rises
+      Dhuhr–Maghrib → closes when the next prayer time arrives
+      Isha    → closes 30 min after Isha time (gives room for late confirmation)
     """
     from src.db import prayer_times as db_pt
 
@@ -335,23 +339,28 @@ async def _is_window_closed(user_id: int, prayer: str, date_str: str, user: dict
 
     now = datetime.datetime.now(tz)
 
+    def _aware(time_str: str) -> datetime.datetime:
+        h, m = map(int, time_str.split(":"))
+        naive = datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
+        return tz.localize(naive)
+
+    if prayer == "Fajr":
+        # Fajr window closes at Sunrise
+        sunrise_str = times.get("Sunrise")
+        if sunrise_str:
+            return now >= _aware(sunrise_str)
+        # Fallback: use Dhuhr if Sunrise not stored
+        return now >= _aware(times.get("Dhuhr", "12:00"))
+
     next_prayer_idx = PRAYERS.index(prayer) + 1
 
     if next_prayer_idx >= len(PRAYERS):
-        # Isha: window closes 30 minutes after Isha time (allow late confirmation)
-        isha_time_str = times.get("Isha", "00:00")
-        h, m = map(int, isha_time_str.split(":"))
-        isha_naive = datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
-        isha_aware = tz.localize(isha_naive)
-        window_end = isha_aware + datetime.timedelta(minutes=30)
+        # Isha: window closes 30 minutes after Isha time
+        window_end = _aware(times.get("Isha", "00:00")) + datetime.timedelta(minutes=30)
         return now > window_end
     else:
         next_prayer = PRAYERS[next_prayer_idx]
-        next_time_str = times.get(next_prayer, "00:00")
-        h, m = map(int, next_time_str.split(":"))
-        next_naive = datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
-        next_aware = tz.localize(next_naive)
-        return now >= next_aware
+        return now >= _aware(times.get(next_prayer, "00:00"))
 
 
 async def _midnight_reschedule(user_id: int) -> None:

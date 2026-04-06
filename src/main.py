@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS prayer_times (
     user_id     INTEGER NOT NULL,
     date        TEXT    NOT NULL,
     fajr        TEXT    NOT NULL,
+    sunrise     TEXT,
     dhuhr       TEXT    NOT NULL,
     asr         TEXT    NOT NULL,
     maghrib     TEXT    NOT NULL,
@@ -69,6 +70,11 @@ async def init_db() -> None:
         await db.execute(_CREATE_USERS)
         await db.execute(_CREATE_PRAYER_TIMES)
         await db.execute(_CREATE_PRAYER_LOG)
+        # Migration: add sunrise column if it doesn't exist yet
+        try:
+            await db.execute("ALTER TABLE prayer_times ADD COLUMN sunrise TEXT")
+        except Exception:
+            pass  # column already exists
         await db.commit()
     logger.info("Database initialized at %s", DB_PATH)
 
