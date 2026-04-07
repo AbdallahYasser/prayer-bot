@@ -67,6 +67,11 @@ async def schedule_all_users(bot) -> None:
         _schedule_user_day(user_id, today_str, times, tz_str)
         _schedule_midnight_job(user_id, tz_str)
 
+        # On restart: catch up any prayer whose time passed but window is still open
+        asyncio.create_task(
+            _catchup_missed_asks(bot, user_id, today_str, times, tz_str, user)
+        )
+
     logger.info("Scheduler setup complete")
 
 
@@ -193,6 +198,71 @@ def _schedule_midnight_job(user_id: int, tz_str: str) -> None:
 # ---------------------------------------------------------------------------
 # Scheduled job functions
 # ---------------------------------------------------------------------------
+
+async def _catchup_missed_asks(bot, user_id: int, date_str: str, times: dict, tz_str: str, user: dict) -> None:
+    """
+    Called once on startup. For each prayer whose time+15min has already passed
+    but whose window is still open and status is still pending, send the ask
+    message immediately so the user isn't silently skipped after a redeploy.
+    """
+    from src.db import prayer_log as db_log
+    from src.localization import prayer_name
+
+    await asyncio.sleep(3)  # let the bot finish starting up first
+
+    try:
+        tz = pytz.timezone(tz_str)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.UTC
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    lang = user.get("language", "en")
+
+    for prayer in PRAYERS:
+        time_str = times.get(prayer)
+        if not time_str:
+            continue
+
+        hour, minute = map(int, time_str.split(":"))
+        naive = datetime.datetime.strptime(f"{date_str} {hour:02d}:{minute:02d}", "%Y-%m-%d %H:%M")
+        aware_dt = tz.localize(naive)
+        ask_dt = aware_dt + datetime.timedelta(minutes=15)
+
+        # Only care about prayers whose ask time has already passed
+        if ask_dt > now_utc:
+            continue
+
+        # Check window is still open
+        if await _is_window_closed(user_id, prayer, date_str, user):
+            continue
+
+        # Only send if still pending
+        status = await db_log.get_status(user_id, date_str, prayer)
+        if status != "pending":
+            continue
+
+        p_name = prayer_name(prayer, lang)
+
+        # For Fajr after sunrise: use Sobh/قضاء message
+        is_sobh = False
+        if prayer == "Fajr":
+            sunrise_str = times.get("Sunrise")
+            if sunrise_str:
+                h, m = map(int, sunrise_str.split(":"))
+                sunrise_aware = tz.localize(
+                    datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
+                )
+                is_sobh = datetime.datetime.now(tz) >= sunrise_aware
+
+        logger.info("Catchup ask for %s %s (missed while bot was down)", prayer, date_str)
+        await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang, is_sobh=is_sobh)
+
+        # Start the repeat loop
+        task_key = f"{user_id}_{prayer}_{date_str}"
+        if task_key not in state.active_reminder_tasks:
+            task = asyncio.create_task(_repeat_reminder_loop(user_id, prayer, date_str))
+            state.active_reminder_tasks[task_key] = task
+
 
 async def _send_prayer_notification(user_id: int, prayer: str, date_str: str, time_str: str) -> None:
     """Fires at prayer time. Sends the initial reminder message."""
