@@ -84,16 +84,22 @@ async def get_monthly_log(user_id: int, year: int, month: int) -> list[dict]:
             return [dict(r) for r in rows]
 
 
-async def get_stats(user_id: int) -> dict:
+async def get_stats(user_id: int, tz_str: str = "UTC") -> dict:
     """
     Compute:
     - current_streak: consecutive days (most recent first) where all 5 were prayed
     - best_streak: longest such streak ever
-    - week_prayed / week_total: this calendar week (Mon-Sun)
+    - week_prayed / week_total: this calendar week (Sat-Fri)
     - month_prayed / month_total: this calendar month
     - total_prayed: all time
     """
     import datetime
+    import pytz
+
+    try:
+        tz = pytz.timezone(tz_str)
+    except Exception:
+        tz = pytz.UTC
 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -121,7 +127,7 @@ async def get_stats(user_id: int) -> dict:
             "total_prayed": 0,
         }
 
-    today = datetime.date.today()
+    today = datetime.datetime.now(tz).date()
 
     # Streak: consecutive days where prayed_count == total (all 5)
     current_streak = 0
@@ -157,8 +163,8 @@ async def get_stats(user_id: int) -> dict:
         else:
             break
 
-    # This week (Mon–Sun)
-    week_start = today - datetime.timedelta(days=today.weekday())
+    # This week (Sat–Fri): Saturday = weekday 5 in Python (Mon=0)
+    week_start = today - datetime.timedelta(days=(today.weekday() - 5) % 7)
     week_rows = [r for r in rows if datetime.date.fromisoformat(r["date"]) >= week_start]
     week_prayed = sum(r["prayed_count"] for r in week_rows)
     week_total = sum(r["total"] for r in week_rows)

@@ -188,7 +188,7 @@ async def cmd_stats(message: Message) -> None:
     user = await db_users.get_user(message.from_user.id)
     lang = user.get("language", "en") if user else "en"
 
-    stats = await db_log.get_stats(message.from_user.id)
+    stats = await db_log.get_stats(message.from_user.id, tz_str=user.get("timezone", "UTC"))
 
     if stats["total_prayed"] == 0:
         await message.answer(t(lang, "stats_none"))
