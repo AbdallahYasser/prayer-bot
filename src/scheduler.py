@@ -432,7 +432,7 @@ async def _is_window_closed(user_id: int, prayer: str, date_str: str, user: dict
 async def _midnight_reschedule(user_id: int) -> None:
     """
     Fires at 00:01 in the user's timezone.
-    Fetches tomorrow's prayer times and schedules jobs for the new day.
+    Schedules today's prayer jobs (the new day that just started).
     """
     from src.db import users as db_users
     from src.db import prayer_times as db_pt
@@ -448,13 +448,14 @@ async def _midnight_reschedule(user_id: int) -> None:
     except pytz.UnknownTimeZoneError:
         tz = pytz.UTC
 
-    tomorrow_str = (datetime.datetime.now(tz) + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    # Fire at 00:01, so "now" is already the new day — schedule today, not tomorrow
+    today_str = datetime.datetime.now(tz).strftime("%Y-%m-%d")
 
-    times = await db_pt.get_or_fetch(user_id, tomorrow_str, user)
+    times = await db_pt.get_or_fetch(user_id, today_str, user)
     if not times:
-        logger.warning("Could not get prayer times for user %d on %s", user_id, tomorrow_str)
+        logger.warning("Could not get prayer times for user %d on %s", user_id, today_str)
         return
 
-    await db_log.init_daily_log(user_id, tomorrow_str)
-    _schedule_user_day(user_id, tomorrow_str, times, tz_str)
-    logger.info("Midnight reschedule done for user %d → %s", user_id, tomorrow_str)
+    await db_log.init_daily_log(user_id, today_str)
+    _schedule_user_day(user_id, today_str, times, tz_str)
+    logger.info("Midnight reschedule done for user %d → %s", user_id, today_str)
