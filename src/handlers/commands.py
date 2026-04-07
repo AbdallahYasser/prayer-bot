@@ -133,14 +133,15 @@ async def cmd_progress(message: Message) -> None:
     month_name = now.strftime("%B") if lang == "en" else _arabic_month(month)
     text = t(lang, "progress_header").format(month_name=month_name, year=year)
 
-    # Day-of-week header
+    # Day-of-week header (Sat–Fri)
     if lang == "en":
-        text += "Mo Tu We Th Fr Sa Su\n"
+        text += "Sa Su Mo Tu We Th Fr\n"
     else:
-        text += "إث ثلا أرب خم جم سب أح\n"
+        text += "سب أح إث ثلا أرب خم جم\n"
 
-    # First day of month (0=Mon, 6=Sun)
-    first_weekday = calendar.monthrange(year, month)[0]
+    # First day of month, converted from Mon=0 to Sat=0
+    mon_first = calendar.monthrange(year, month)[0]  # 0=Mon … 6=Sun
+    first_weekday = (mon_first + 2) % 7              # 0=Sat … 6=Fri
     num_days = calendar.monthrange(year, month)[1]
 
     cells = ["  "] * first_weekday  # padding before day 1
