@@ -8,14 +8,9 @@ services:
     networks:
       - coolify
     volumes:
-      - prayer_bot_data:/app/data:ro
+      - /var/lib/docker/volumes/xkkwgc04wgs4sosk4k0ckgw8_prayer_bot_data/_data:/app/data:ro
 
 networks:
   coolify:
     external: true
     name: coolify
-
-volumes:
-  prayer_bot_data:
-    external: true
-    name: xkkwgc04wgs4sosk4k0ckgw8_prayer_bot_data
