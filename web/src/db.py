@@ -10,6 +10,11 @@ import pytz
 
 DB_PATH = os.getenv("DB_PATH", "/app/data/prayer_bot.db")
 
+def _db_uri() -> str:
+    """Return a SQLite URI with immutable=1 so WAL-mode DBs can be read
+    from a read-only bind-mount without needing to create .db-shm files."""
+    return f"file:{DB_PATH}?immutable=1"
+
 ISHA_WINDOW_LABELS = {
     "midnight": {"en": "Until Midnight",       "ar": "حتى منتصف الليل"},
     "fajr":     {"en": "Until Fajr (next day)", "ar": "حتى الفجر (اليوم التالي)"},
@@ -20,7 +25,7 @@ ISHA_WINDOW_LABELS = {
 
 
 async def get_user(user_id: int) -> dict | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cur:
             row = await cur.fetchone()
@@ -29,7 +34,7 @@ async def get_user(user_id: int) -> dict | None:
 
 async def get_yearly_log(user_id: int, year: int) -> list[dict]:
     """All days in a year: [{date, prayed_count, total}]"""
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
             """
@@ -49,7 +54,7 @@ async def get_yearly_log(user_id: int, year: int) -> list[dict]:
 async def get_monthly_log(user_id: int, year: int, month: int) -> list[dict]:
     """Days in a month with per-prayer breakdown."""
     month_str = f"{year:04d}-{month:02d}"
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
             """
@@ -87,7 +92,7 @@ async def get_stats(user_id: int, tz_str: str = "UTC") -> dict:
     except Exception:
         tz = pytz.UTC
 
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
             """
