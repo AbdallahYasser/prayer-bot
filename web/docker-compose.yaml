@@ -8,7 +8,7 @@ services:
     networks:
       - coolify
     volumes:
-      - /var/lib/docker/volumes/xkkwgc04wgs4sosk4k0ckgw8_prayer_bot_data/_data:/app/data:ro
+      - /var/lib/docker/volumes/xkkwgc04wgs4sosk4k0ckgw8_prayer-bot-data/_data:/app/data:ro
 
 networks:
   coolify:
