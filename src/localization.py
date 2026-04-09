@@ -46,7 +46,7 @@ STRINGS: dict[str, dict[str, str]] = {
 
         # /progress
         "progress_header": "📊 <b>{month_name} {year}</b>\n\n",
-        "progress_legend": "\n🟩 5/5  🟨 3-4/5  🟧 1-2/5  🟥 0/5  ⬜ upcoming",
+        "progress_legend": "\n🟩 5/5  🟦 4/5  🟨 3/5  🟧 2/5  🟫 1/5  🟥 0/5  ⬜ upcoming",
 
         # /stats
         "stats_header": "📈 <b>Your Prayer Stats</b>\n\n",
@@ -132,7 +132,7 @@ STRINGS: dict[str, dict[str, str]] = {
 
         # /progress
         "progress_header": "📊 <b>{month_name} {year}</b>\n\n",
-        "progress_legend": "\n🟩 5/5  🟨 3-4/5  🟧 1-2/5  🟥 0/5  ⬜ قادم",
+        "progress_legend": "\n🟩 5/5  🟦 4/5  🟨 3/5  🟧 2/5  🟫 1/5  🟥 0/5  ⬜ قادم",
 
         # /stats
         "stats_header": "📈 <b>إحصائيات صلاتك</b>\n\n",

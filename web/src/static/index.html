@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prayer Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.css" />
+  <link rel="stylesheet" href="/style.css" />
+  <meta name="bot-username" content="islamic_prayer_reminder_bot" />
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="login-screen" class="screen hidden">
+  <div class="login-box">
+    <div class="login-icon">🕌</div>
+    <h1>Prayer Tracker</h1>
+    <p>Login with your Telegram account to view your prayer progress.</p>
+    <div id="telegram-login-widget"></div>
+  </div>
+</div>
+
+<!-- Main dashboard -->
+<div id="dashboard" class="screen hidden">
+  <header>
+    <div class="header-left">
+      <span class="header-icon">🕌</span>
+      <span class="header-title">Prayer Tracker</span>
+    </div>
+    <div class="header-right">
+      <span id="user-name"></span>
+      <button id="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- Stat cards -->
+  <section class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">🔥</div>
+      <div class="stat-value" id="stat-streak">—</div>
+      <div class="stat-label" id="label-streak">Current streak</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-value" id="stat-best">—</div>
+      <div class="stat-label" id="label-best">Best streak</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-value" id="stat-week">—</div>
+      <div class="stat-label" id="label-week">This week</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🗓</div>
+      <div class="stat-value" id="stat-month">—</div>
+      <div class="stat-label" id="label-month">This month</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🕌</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label" id="label-total">All time</div>
+    </div>
+  </section>
+
+  <!-- User settings (read-only) -->
+  <section class="settings-bar">
+    <span>⏰ <span id="setting-isha">—</span></span>
+    <span>🔁 Reminder every <span id="setting-interval">—</span> min</span>
+  </section>
+
+  <!-- Year heatmap -->
+  <section class="heatmap-section">
+    <div class="heatmap-header">
+      <button onclick="changeYear(-1)">‹</button>
+      <span id="year-label">2026</span>
+      <button onclick="changeYear(+1)">›</button>
+    </div>
+    <div id="cal"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="dot" style="background:#e0e0e0"></span> No data</span>
+      <span class="legend-item"><span class="dot" style="background:#ef4444"></span> 0/5</span>
+      <span class="legend-item"><span class="dot" style="background:#a16207"></span> 1/5</span>
+      <span class="legend-item"><span class="dot" style="background:#f97316"></span> 2/5</span>
+      <span class="legend-item"><span class="dot" style="background:#eab308"></span> 3/5</span>
+      <span class="legend-item"><span class="dot" style="background:#3b82f6"></span> 4/5</span>
+      <span class="legend-item"><span class="dot" style="background:#22c55e"></span> 5/5</span>
+    </div>
+  </section>
+
+  <!-- Month detail (shown on click) -->
+  <section class="month-detail hidden" id="month-detail">
+    <h2 id="month-detail-title"></h2>
+    <div id="month-grid"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

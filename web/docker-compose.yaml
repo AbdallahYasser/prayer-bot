@@ -1,0 +1,11 @@
+services:
+  prayer-web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - prayer_bot_data:/app/data:ro
+volumes:
+  prayer_bot_data:
+    external: true
+    name: xkkwgc04wgs4sosk4k0ckgw8_prayer-bot-data

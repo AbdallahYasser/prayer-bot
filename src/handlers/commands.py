@@ -156,14 +156,12 @@ async def cmd_progress(message: Message) -> None:
                 cells.append("⬜")
             else:
                 count = r["prayed_count"]
-                if count == 5:
-                    cells.append("🟩")
-                elif count >= 3:
-                    cells.append("🟨")
-                elif count >= 1:
-                    cells.append("🟧")
-                else:
-                    cells.append("🟥")
+                if count == 5:   cells.append("🟩")
+                elif count == 4: cells.append("🟦")
+                elif count == 3: cells.append("🟨")
+                elif count == 2: cells.append("🟧")
+                elif count == 1: cells.append("🟫")
+                else:            cells.append("🟥")
 
     # Build rows of 7
     rows = [cells[i:i+7] for i in range(0, len(cells), 7)]
