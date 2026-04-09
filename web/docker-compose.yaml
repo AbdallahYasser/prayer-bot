@@ -3,8 +3,18 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    expose:
+      - "8080"
+    networks:
+      - coolify
     volumes:
       - prayer_bot_data:/app/data:ro
+
+networks:
+  coolify:
+    external: true
+    name: coolify
+
 volumes:
   prayer_bot_data:
     external: true
