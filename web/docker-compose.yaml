@@ -18,4 +18,4 @@ networks:
 volumes:
   prayer_bot_data:
     external: true
-    name: xkkwgc04wgs4sosk4k0ckgw8_prayer-bot-data
+    name: xkkwgc04wgs4sosk4k0ckgw8_prayer_bot_data
