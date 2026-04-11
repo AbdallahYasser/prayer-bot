@@ -2,6 +2,7 @@
 Prayer Web — FastAPI backend.
 Serves the static frontend and provides read-only API endpoints.
 All endpoints require a valid session cookie (set by /api/auth/telegram).
+Notifications: pre/post deploy commands send Telegram messages via the prayer bot.
 """
 import datetime
 import os
