@@ -106,6 +106,48 @@ async def heatmap(year: int | None = None, user_id: int = Depends(auth.get_curre
     return {"year": year, "days": rows}
 
 
+@app.get("/api/config")
+async def config():
+    """Public — bot config for the login widget."""
+    return {"bot_username": os.getenv("BOT_USERNAME", "islamic_prayer_reminder_bot")}
+
+
+@app.get("/api/today")
+async def today(user_id: int = Depends(auth.get_current_user)):
+    user = await db.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found in bot database")
+
+    tz_str = (user or {}).get("timezone") or "UTC"
+    import pytz
+    try:
+        tz = pytz.timezone(tz_str)
+    except Exception:
+        tz = pytz.UTC
+
+    now = datetime.datetime.now(tz)
+    today_str = now.strftime("%Y-%m-%d")
+    today_display = now.strftime("%A, %d %B %Y")
+
+    times = await db.get_prayer_times(user_id, today_str)
+    log   = await db.get_daily_log(user_id, today_str)
+
+    prayers = []
+    for prayer in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]:
+        prayers.append({
+            "name":   prayer,
+            "time":   (times or {}).get(prayer),
+            "status": log.get(prayer, "pending"),
+        })
+
+    return {
+        "date":         today_str,
+        "date_display": today_display,
+        "prayers":      prayers,
+        "has_times":    times is not None,
+    }
+
+
 @app.get("/api/month")
 async def month(m: str | None = None, user_id: int = Depends(auth.get_current_user)):
     """m = 'YYYY-MM', defaults to current month."""

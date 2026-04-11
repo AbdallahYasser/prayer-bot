@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.css" />
   <link rel="stylesheet" href="/style.css" />
-  <meta name="bot-username" content="islamic_prayer_reminder_bot" />
+  <!-- bot-username is loaded dynamically from /api/config -->
 </head>
 <body>
 
@@ -67,6 +67,12 @@
   <section class="settings-bar">
     <span>⏰ <span id="setting-isha">—</span></span>
     <span>🔁 Reminder every <span id="setting-interval">—</span> min</span>
+  </section>
+
+  <!-- Today's prayers -->
+  <section class="today-section" id="today-section">
+    <h2 class="section-title" id="today-title"></h2>
+    <div id="today-prayers"></div>
   </section>
 
   <!-- Year heatmap -->

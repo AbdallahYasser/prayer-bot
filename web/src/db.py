@@ -85,6 +85,39 @@ async def get_monthly_log(user_id: int, year: int, month: int) -> list[dict]:
     return result
 
 
+async def get_prayer_times(user_id: int, date_str: str) -> dict | None:
+    """Prayer times for a given date."""
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM prayer_times WHERE user_id = ? AND date = ?",
+            (user_id, date_str),
+        ) as cur:
+            row = await cur.fetchone()
+            if not row:
+                return None
+            return {
+                "Fajr":    row["fajr"],
+                "Sunrise": row["sunrise"],
+                "Dhuhr":   row["dhuhr"],
+                "Asr":     row["asr"],
+                "Maghrib": row["maghrib"],
+                "Isha":    row["isha"],
+            }
+
+
+async def get_daily_log(user_id: int, date_str: str) -> dict:
+    """Prayer statuses for a given date: {prayer_name: status}"""
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT prayer, status FROM prayer_log WHERE user_id = ? AND date = ?",
+            (user_id, date_str),
+        ) as cur:
+            rows = await cur.fetchall()
+            return {r["prayer"]: r["status"] for r in rows}
+
+
 async def get_stats(user_id: int, tz_str: str = "UTC") -> dict:
     """Identical logic to the bot's prayer_log.get_stats()."""
     try:

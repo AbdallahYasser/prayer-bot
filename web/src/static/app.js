@@ -29,7 +29,18 @@ let heatmapData  = {};     // { "YYYY-MM-DD": prayed_count }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
+let botUsername = 'islamic_prayer_reminder_bot';  // fallback
+
 (async function boot() {
+  // Load bot username before showing login screen
+  try {
+    const cfgRes = await fetch('/api/config');
+    if (cfgRes.ok) {
+      const cfg = await cfgRes.json();
+      if (cfg.bot_username) botUsername = cfg.bot_username;
+    }
+  } catch { /* use fallback */ }
+
   try {
     const res = await api('/api/me');
     currentUser = await res.json();
@@ -48,7 +59,7 @@ function showLogin() {
   // Inject Telegram Login Widget script dynamically
   const s = document.createElement('script');
   s.src           = 'https://telegram.org/js/telegram-widget.js?22';
-  s.dataset.telegramLogin   = getTelegramBotUsername();
+  s.dataset.telegramLogin   = botUsername;
   s.dataset.size            = 'large';
   s.dataset.onauth          = 'onTelegramAuth(user)';
   s.dataset.requestAccess   = 'write';
@@ -104,6 +115,7 @@ async function showDashboard() {
   }
 
   await loadStats();
+  await loadToday();
   await loadHeatmap();
 }
 
@@ -125,6 +137,55 @@ async function loadStats() {
 function pct(prayed, total) {
   if (!total) return '—';
   return `${Math.round(prayed / total * 100)}%`;
+}
+
+// ── Today ─────────────────────────────────────────────────────────────────────
+
+const PRAYER_NAMES_AR = {
+  Fajr: 'الفجر', Dhuhr: 'الظهر', Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء',
+};
+
+async function loadToday() {
+  const section = document.getElementById('today-section');
+  try {
+    const res  = await api('/api/today');
+    const data = await res.json();
+
+    const lang = currentUser.language;
+    const title = lang === 'ar' ? `📅 صلوات اليوم — ${data.date_display}` : `📅 Today — ${data.date_display}`;
+    document.getElementById('today-title').textContent = title;
+
+    const container = document.getElementById('today-prayers');
+    container.innerHTML = '';
+
+    if (!data.has_times) {
+      const msg = document.createElement('p');
+      msg.className = 'today-no-times';
+      msg.textContent = lang === 'ar'
+        ? 'لم يتم جلب أوقات الصلاة بعد. افتح التطبيق في تيليغرام أولاً.'
+        : 'Prayer times not fetched yet. Open the bot in Telegram first.';
+      container.appendChild(msg);
+      return;
+    }
+
+    for (const p of data.prayers) {
+      const row = document.createElement('div');
+      row.className = `prayer-row status-${p.status}`;
+
+      const icon = p.status === 'prayed' ? '✅' : p.status === 'missed' ? '❌' : '⏳';
+      const name = lang === 'ar' ? (PRAYER_NAMES_AR[p.name] || p.name) : p.name;
+      const time = p.time || '—';
+
+      row.innerHTML = `
+        <span class="prayer-row-status">${icon}</span>
+        <span class="prayer-row-name">${name}</span>
+        <span class="prayer-row-time">${time}</span>
+      `;
+      container.appendChild(row);
+    }
+  } catch {
+    section.classList.add('hidden');
+  }
 }
 
 // ── Heatmap ──────────────────────────────────────────────────────────────────
@@ -299,6 +360,7 @@ function setLabelsAr() {
   document.querySelector('.settings-bar span:last-child').innerHTML =
     '🔁 تكرار كل <span id="setting-interval">' +
     (currentUser.reminder_interval || '—') + '</span> دقيقة';
+  // today title is set in loadToday() which runs after this
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -317,8 +379,3 @@ function setText(id, val) {
   if (el) el.textContent = val;
 }
 
-function getTelegramBotUsername() {
-  // Injected by the server as a meta tag
-  const meta = document.querySelector('meta[name="bot-username"]');
-  return meta ? meta.content : 'islamic_prayer_reminder_bot';
-}
