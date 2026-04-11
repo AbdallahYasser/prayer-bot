@@ -23,6 +23,22 @@ ISHA_WINDOW_LABELS = {
     "180":      {"en": "3 hours after Isha",    "ar": "3 ساعات بعد العشاء"},
 }
 
+CALC_METHODS: dict[int, str] = {
+    1:  "University of Islamic Sciences, Karachi",
+    2:  "Islamic Society of North America (ISNA)",
+    3:  "Muslim World League",
+    4:  "Umm Al-Qura University, Makkah",
+    5:  "Egyptian General Authority of Survey",
+    7:  "Institute of Geophysics, University of Tehran",
+    8:  "Gulf Region",
+    9:  "Kuwait",
+    10: "Qatar",
+    11: "Majlis Ugama Islam Singapura, Singapore",
+    12: "Union Organization Islamic de France",
+    13: "Diyanet İşleri Başkanlığı, Turkey",
+    14: "Spiritual Administration of Muslims of Russia",
+}
+
 
 async def get_user(user_id: int) -> dict | None:
     async with aiosqlite.connect(_db_uri(), uri=True) as db:

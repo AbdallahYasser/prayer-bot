@@ -70,15 +70,24 @@ async def me(user_id: int = Depends(auth.get_current_user)):
     isha_window = user.get("isha_window") or "midnight"
     lang = user.get("language") or "en"
     isha_label = db.ISHA_WINDOW_LABELS.get(isha_window, {}).get(lang, isha_window)
+    calc_method = user.get("calc_method") or 5
+    calc_method_name = db.CALC_METHODS.get(calc_method, str(calc_method))
 
     return {
-        "user_id":          user_id,
-        "first_name":       user.get("first_name") or "",
-        "timezone":         tz_str,
-        "language":         lang,
-        "isha_window":      isha_window,
-        "isha_label":       isha_label,
+        "user_id":           user_id,
+        "username":          user.get("username") or "",
+        "first_name":        user.get("first_name") or "",
+        "city":              user.get("city") or "",
+        "country":           user.get("country") or "",
+        "timezone":          tz_str,
+        "language":          lang,
+        "calc_method":       calc_method,
+        "calc_method_name":  calc_method_name,
+        "reminders_on":      bool(user.get("reminders_on", 1)),
+        "isha_window":       isha_window,
+        "isha_label":        isha_label,
         "reminder_interval": user.get("reminder_interval") or 5,
+        "created_at":        user.get("created_at") or "",
     }
 
 

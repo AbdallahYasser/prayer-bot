@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Prayer Tracker</title>
-  <script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.css" />
-  <link rel="stylesheet" href="/style.css" />
-  <!-- bot-username is loaded dynamically from /api/config -->
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
 
@@ -29,7 +26,14 @@
       <span class="header-title">Prayer Tracker</span>
     </div>
     <div class="header-right">
-      <span id="user-name"></span>
+      <div class="user-info">
+        <div class="user-main">
+          <span id="user-name"></span>
+          <span id="reminder-bell" class="reminder-bell"></span>
+        </div>
+        <span id="user-location" class="user-location"></span>
+      </div>
+      <button id="lang-toggle" onclick="toggleLanguage()" class="lang-btn">AR</button>
       <button id="logout-btn" onclick="logout()">Logout</button>
     </div>
   </header>
@@ -65,42 +69,54 @@
 
   <!-- User settings (read-only) -->
   <section class="settings-bar">
-    <span>⏰ <span id="setting-isha">—</span></span>
-    <span>🔁 Reminder every <span id="setting-interval">—</span> min</span>
+    <div class="setting-item">
+      <div class="setting-main"><span class="setting-icon">📍</span> <span id="setting-calc">—</span></div>
+      <div class="setting-desc" id="desc-calc">Calculation method</div>
+    </div>
+    <div class="setting-item">
+      <div class="setting-main"><span class="setting-icon">⏰</span> <span id="setting-isha">—</span></div>
+      <div class="setting-desc" id="desc-isha">Isha reminder window</div>
+    </div>
+    <div class="setting-item">
+      <div class="setting-main"><span class="setting-icon">🔁</span> <span id="label-reminders">Every</span> <span id="setting-interval">—</span> <span id="label-mins">min</span></div>
+      <div class="setting-desc" id="desc-interval">Frequency of notifications</div>
+    </div>
   </section>
 
   <!-- Today's prayers -->
   <section class="today-section" id="today-section">
-    <h2 class="section-title" id="today-title"></h2>
+    <div class="section-header-clickable" onclick="openCalendar()">
+      <span class="calendar-icon-hint">📅</span>
+      <h2 class="section-title" id="today-title"></h2>
+    </div>
     <div id="today-prayers"></div>
   </section>
 
-  <!-- Year heatmap -->
-  <section class="heatmap-section">
-    <div class="heatmap-header">
-      <button onclick="changeYear(-1)">‹</button>
-      <span id="year-label">2026</span>
-      <button onclick="changeYear(+1)">›</button>
+  <!-- Month detail Modal -->
+  <div id="calendar-modal" class="modal-overlay hidden" onclick="closeCalendar(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeCalendar()">×</button>
+      <div class="month-detail" id="month-detail">
+        <div class="month-detail-header">
+          <button onclick="changeMonth(-1)">‹</button>
+          <h2 id="month-detail-title"></h2>
+          <button onclick="changeMonth(1)">›</button>
+        </div>
+        <div id="month-grid"></div>
+        <div class="legend calendar-legend">
+          <span class="legend-item"><span class="dot" style="background:#1e293b"></span> <span id="leg-none">Upcoming</span></span>
+          <span class="legend-item"><span class="dot" style="background:#ef4444"></span> 0/5</span>
+          <span class="legend-item"><span class="dot" style="background:#a16207"></span> 1/5</span>
+          <span class="legend-item"><span class="dot" style="background:#f97316"></span> 2/5</span>
+          <span class="legend-item"><span class="dot" style="background:#eab308"></span> 3/5</span>
+          <span class="legend-item"><span class="dot" style="background:#3b82f6"></span> 4/5</span>
+          <span class="legend-item"><span class="dot" style="background:#22c55e"></span> 5/5</span>
+        </div>
+      </div>
     </div>
-    <div id="cal"></div>
-    <div class="legend">
-      <span class="legend-item"><span class="dot" style="background:#e0e0e0"></span> No data</span>
-      <span class="legend-item"><span class="dot" style="background:#ef4444"></span> 0/5</span>
-      <span class="legend-item"><span class="dot" style="background:#a16207"></span> 1/5</span>
-      <span class="legend-item"><span class="dot" style="background:#f97316"></span> 2/5</span>
-      <span class="legend-item"><span class="dot" style="background:#eab308"></span> 3/5</span>
-      <span class="legend-item"><span class="dot" style="background:#3b82f6"></span> 4/5</span>
-      <span class="legend-item"><span class="dot" style="background:#22c55e"></span> 5/5</span>
-    </div>
-  </section>
-
-  <!-- Month detail (shown on click) -->
-  <section class="month-detail hidden" id="month-detail">
-    <h2 id="month-detail-title"></h2>
-    <div id="month-grid"></div>
-  </section>
+  </div>
 </div>
 
-<script src="/app.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
