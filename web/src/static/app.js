@@ -26,6 +26,7 @@ let currentUser  = null;   // {user_id, first_name, timezone, language, isha_lab
 let currentYear  = new Date().getFullYear();
 let currentMonth = null;   // "YYYY-MM"
 let monthData    = {};     // { "YYYY-MM-DD": entry }
+let cal          = null;   // cal-heatmap instance
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
@@ -149,10 +150,10 @@ async function showDashboard() {
 
   await loadStats();
   await loadToday();
+  await loadHeatmap();
 
   if (!currentMonth) {
-    const now = new Date();
-    currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    currentMonth = localToday().slice(0, 7);  // "YYYY-MM"
   }
 }
 
@@ -218,6 +219,64 @@ async function loadToday() {
   }
 }
 
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+
+async function loadHeatmap() {
+  document.getElementById('year-label').textContent = currentYear;
+
+  const res  = await api(`/api/heatmap?year=${currentYear}`);
+  const data = await res.json();
+
+  const dataset = data.days.map(d => ({ date: d.date, value: d.prayed_count }));
+
+  if (cal) { cal.destroy(); }
+
+  cal = new CalHeatmap();
+  cal.paint({
+    data: {
+      source: dataset,
+      x: 'date',
+      y: 'value',
+      defaultValue: null,
+    },
+    date: {
+      start: new Date(`${currentYear}-01-01`),
+      locale: { weekStart: 6 },  // Saturday start
+    },
+    range: 12,
+    scale: {
+      color: {
+        type: 'threshold',
+        range: [COLORS.none, COLORS[0], COLORS[1], COLORS[2], COLORS[3], COLORS[4], COLORS[5]],
+        domain: [0, 1, 2, 3, 4, 5],
+      },
+    },
+    domain: { type: 'month', label: { text: 'MMM', textAlign: 'start', position: 'top' } },
+    subDomain: { type: 'day', radius: 2, width: 13, height: 13, gutter: 3 },
+    itemSelector: '#cal',
+  });
+}
+
+async function changeYear(delta) {
+  currentYear += delta;
+  await loadHeatmap();
+}
+
+// Click on a month label in the heatmap → open calendar modal for that month
+document.addEventListener('click', e => {
+  const label = e.target.closest('.ch-domain-text');
+  if (!label) return;
+  const domain = label.closest('[data-key]') || label.parentElement?.closest('[data-key]');
+  if (!domain) return;
+  const key = domain.dataset.key;
+  if (!key) return;
+  const d = new Date(isNaN(key) ? key : Number(key));
+  const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  currentMonth = ym;
+  show('calendar-modal');
+  loadMonthDetail(ym);
+});
+
 // ── Modal & Calendar logic ────────────────────────────────────────────────────
 
 function openCalendar() {
@@ -257,7 +316,7 @@ async function loadMonthDetail(yearMonth) {
   const firstDow  = new Date(y, m - 1, 1).getDay(); // 0=Sun…6=Sat
   const satFirst  = (firstDow + 1) % 7;
   const daysInMonth = new Date(y, m, 0).getDate();
-  const today     = new Date().toISOString().slice(0, 10);
+  const today     = localToday();
 
   const grid = document.getElementById('month-grid');
   grid.innerHTML = '';
@@ -315,7 +374,7 @@ async function loadMonthDetail(yearMonth) {
 // entry.times is optional: {Fajr: "04:32", ...} (only present for today)
 function showDayData(dateStr, entry, dateDisplay) {
   const lang = currentUser.language;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const isToday = dateStr === today;
 
   if (!dateDisplay) {
@@ -402,6 +461,7 @@ function setLabelsAr() {
   setText('desc-isha', 'نافذة تنبيهات صلاة العشاء');
   setText('desc-interval', 'تكرار التنبيهات لكل صلاة');
   setText('leg-none', 'لم يحن بعد');
+  setText('leg-heatmap-none', 'لا بيانات');
 }
 
 function setLabelsEn() {
@@ -416,9 +476,22 @@ function setLabelsEn() {
   setText('desc-isha', 'Isha reminder window');
   setText('desc-interval', 'Frequency of notifications');
   setText('leg-none', 'Upcoming');
+  setText('leg-heatmap-none', 'No data');
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────────
+
+// Returns today as "YYYY-MM-DD" in the user's timezone (not UTC).
+// Fixes the bug where UTC midnight ≠ local midnight for users in UTC+N zones.
+function localToday() {
+  try {
+    const tz = (currentUser && currentUser.timezone) || 'UTC';
+    // en-CA locale produces YYYY-MM-DD format which is exactly what we need
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
 
 async function api(url) {
   if (isDemoMode) return mockApi(url);
@@ -440,6 +513,18 @@ function mockApi(url) {
       { name: "Maghrib", time: "18:49", status: "pending" },
       { name: "Isha",    time: "20:18", status: "pending" },
     ]};
+  } else if (url.includes('/api/heatmap')) {
+    const year = parseInt(url.split('year=')[1]) || 2026;
+    const days = [];
+    for (let m = 1; m <= 12; m++) {
+      const daysInMonth = new Date(year, m, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if (dateStr > new Date().toISOString().slice(0,10)) break;
+        days.push({ date: dateStr, prayed_count: Math.floor(Math.random() * 6), total: 5 });
+      }
+    }
+    data = { year, days };
   } else if (url.includes('/api/month')) {
     const days = [];
     const ym = url.split('=')[1] || "2026-04";

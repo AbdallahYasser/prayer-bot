@@ -196,6 +196,38 @@ header {
 
 .prayer-row.status-missed { opacity: .6; }
 
+/* ── Heatmap ────────────────────────────────────────── */
+.heatmap-section {
+  padding: 20px 24px;
+  overflow-x: auto;
+  border-top: 1px solid #1e293b;
+}
+.heatmap-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.heatmap-header button {
+  background: #334155;
+  border: none;
+  color: #e2e8f0;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.heatmap-header button:hover { background: #475569; }
+#cal { min-width: 650px; }
+.ch-domain-text { fill: #94a3b8 !important; font-size: 11px; cursor: pointer; }
+.ch-domain-text:hover { fill: #e2e8f0 !important; }
+.heatmap-legend { margin-top: 14px; }
+
 /* ── Legend (for heatmap and modal) ──────────────────── */
 .legend {
   display: flex;
@@ -315,6 +347,7 @@ header {
   .stat-card:last-child { grid-column: span 2; }
   .settings-bar { padding: 16px; }
   .today-section { padding: 12px 16px; }
+  .heatmap-section { padding: 14px 16px; }
   .month-detail { padding: 16px; }
   .modal-content { border-radius: 16px; }
   
