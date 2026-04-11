@@ -1,5 +1,6 @@
 import asyncio
 import logging
+# prayer-bot
 
 import aiosqlite
 from aiogram import Dispatcher
