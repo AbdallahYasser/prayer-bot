@@ -231,7 +231,9 @@ async function loadToday() {
       prayersObj[p.name] = p.status;
       timesObj[p.name]   = p.time;
     }
-    showDayData(data.date, { prayers: prayersObj, times: timesObj }, data.date_display);
+    // Don't pass data.date_display — it's always English from the API.
+    // Let showDayData compute the date in the user's language instead.
+    showDayData(data.date, { prayers: prayersObj, times: timesObj });
   } catch {
     section.classList.add('hidden');
   }
