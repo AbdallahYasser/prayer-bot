@@ -254,8 +254,13 @@ async def _catchup_missed_asks(bot, user_id: int, date_str: str, times: dict, tz
                 )
                 is_sobh = datetime.datetime.now(tz) >= sunrise_aware
 
+        is_jumuah = (prayer == "Dhuhr" and datetime.datetime.now(tz).weekday() == 4)
+
         logger.info("Catchup ask for %s %s (missed while bot was down)", prayer, date_str)
-        await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang, is_sobh=is_sobh)
+        await _send_ask_message(
+            bot, user_id, prayer, date_str, p_name, lang,
+            is_sobh=is_sobh, is_jumuah=is_jumuah,
+        )
 
         # Start the repeat loop
         task_key = f"{user_id}_{prayer}_{date_str}"
@@ -309,7 +314,14 @@ async def _send_prayer_ask(user_id: int, prayer: str, date_str: str) -> None:
     lang = user.get("language", "en")
     p_name = prayer_name(prayer, lang)
 
-    await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang)
+    tz_str = user.get("timezone") or "UTC"
+    try:
+        tz = pytz.timezone(tz_str)
+    except Exception:
+        tz = pytz.UTC
+    is_jumuah = (prayer == "Dhuhr" and datetime.datetime.now(tz).weekday() == 4)
+
+    await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang, is_jumuah=is_jumuah)
 
     # Start 5-min repeat loop
     task_key = f"{user_id}_{prayer}_{date_str}"
@@ -322,29 +334,47 @@ async def _send_prayer_ask(user_id: int, prayer: str, date_str: str) -> None:
 
 async def _send_ask_message(
     bot, user_id: int, prayer: str, date_str: str,
-    p_name: str, lang: str, is_sobh: bool = False,
+    p_name: str, lang: str, is_sobh: bool = False, is_jumuah: bool = False,
 ) -> None:
-    """Send the 'Did you pray?' message with Yes/No inline keyboard.
-    is_sobh=True switches to the قضاء (make-up) message for Fajr after Sunrise.
+    """Send the 'Did you pray?' message with inline keyboard.
+
+    is_sobh=True   → Fajr after sunrise: shows قضاء message with Yes/No buttons.
+    is_jumuah=True → Friday Dhuhr: shows 3 buttons (Jumu'ah / Dhuhr / No).
     """
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     from src.localization import t
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text="✅ Yes" if lang == "en" else "✅ نعم",
-            callback_data=f"pray:yes:{prayer}:{date_str}",
-        ),
-        InlineKeyboardButton(
-            text="❌ No" if lang == "en" else "❌ لا",
-            callback_data=f"pray:no:{prayer}:{date_str}",
-        ),
-    ]])
-
-    if is_sobh:
-        text = t(lang, "did_you_pray_sobh")
+    if is_jumuah:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text="✅ الجمعة" if lang == "ar" else "✅ Jumu'ah",
+                callback_data=f"pray:jumuah:{prayer}:{date_str}",
+            ),
+            InlineKeyboardButton(
+                text="✅ الظهر" if lang == "ar" else "✅ Dhuhr",
+                callback_data=f"pray:yes:{prayer}:{date_str}",
+            ),
+            InlineKeyboardButton(
+                text="❌ لا" if lang == "ar" else "❌ No",
+                callback_data=f"pray:no:{prayer}:{date_str}",
+            ),
+        ]])
+        text = t(lang, "friday_prayer_ask")
     else:
-        text = t(lang, "did_you_pray").format(prayer=p_name)
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text="✅ Yes" if lang == "en" else "✅ نعم",
+                callback_data=f"pray:yes:{prayer}:{date_str}",
+            ),
+            InlineKeyboardButton(
+                text="❌ No" if lang == "en" else "❌ لا",
+                callback_data=f"pray:no:{prayer}:{date_str}",
+            ),
+        ]])
+        if is_sobh:
+            text = t(lang, "did_you_pray_sobh")
+        else:
+            text = t(lang, "did_you_pray").format(prayer=p_name)
 
     try:
         await bot.send_message(user_id, text, reply_markup=keyboard)
@@ -398,24 +428,30 @@ async def _repeat_reminder_loop(user_id: int, prayer: str, date_str: str) -> Non
             lang = user.get("language", "en")
             p_name = prayer_name(prayer, lang)
 
+            tz_str = user.get("timezone") or "UTC"
+            try:
+                tz = pytz.timezone(tz_str)
+            except Exception:
+                tz = pytz.UTC
+
             # For Fajr: check if we're past Sunrise → switch to Sobh/قضاء message
             is_sobh = False
             if prayer == "Fajr":
                 times = await db_pt.get_prayer_times(user_id, date_str)
                 sunrise_str = times.get("Sunrise") if times else None
                 if sunrise_str:
-                    tz_str = user.get("timezone") or "UTC"
-                    try:
-                        tz = pytz.timezone(tz_str)
-                    except Exception:
-                        tz = pytz.UTC
                     h, m = map(int, sunrise_str.split(":"))
                     sunrise_aware = tz.localize(
                         datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
                     )
                     is_sobh = datetime.datetime.now(tz) >= sunrise_aware
 
-            await _send_ask_message(bot, user_id, prayer, date_str, p_name, lang, is_sobh=is_sobh)
+            is_jumuah = (prayer == "Dhuhr" and datetime.datetime.now(tz).weekday() == 4)
+
+            await _send_ask_message(
+                bot, user_id, prayer, date_str, p_name, lang,
+                is_sobh=is_sobh, is_jumuah=is_jumuah,
+            )
 
     except asyncio.CancelledError:
         pass  # Task cancelled because user tapped ✅ Yes

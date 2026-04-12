@@ -32,8 +32,10 @@ STRINGS: dict[str, dict[str, str]] = {
         # Prayer ask
         "did_you_pray": "🤲 Did you pray <b>{prayer}</b>?",
         "did_you_pray_sobh": "🌅 Fajr time has passed (sun has risen).\nDid you pray <b>Sobh</b> (make-up)? 🤲",
+        "friday_prayer_ask": "🕌 Friday prayer — which did you attend?",
         "prayer_confirmed": "✅ <b>{prayer}</b> logged. Alhamdulillah! 🌟",
         "prayer_confirmed_qadaa": "✅ <b>Sobh</b> (make-up) logged. Alhamdulillah! 🌟",
+        "prayer_confirmed_jumuah": "✅ <b>Jumu'ah</b> logged. Alhamdulillah! 🌟",
         "reminder_continuing": "We'll remind you again in {minutes} min.",
 
         # /today
@@ -118,8 +120,10 @@ STRINGS: dict[str, dict[str, str]] = {
         # Prayer ask
         "did_you_pray": "🤲 هل صلّيت <b>{prayer}</b>؟",
         "did_you_pray_sobh": "🌅 انتهى وقت الفجر (الشمس أشرقت).\nهل صلّيت <b>الصبح</b> (قضاء)؟ 🤲",
+        "friday_prayer_ask": "🕌 صلاة الجمعة — أيهما أدّيت؟",
         "prayer_confirmed": "✅ تم تسجيل صلاة <b>{prayer}</b>. الحمد لله! 🌟",
         "prayer_confirmed_qadaa": "✅ تم تسجيل <b>الصبح</b> قضاءً. الحمد لله! 🌟",
+        "prayer_confirmed_jumuah": "✅ تم تسجيل <b>الجمعة</b>. الحمد لله! 🌟",
         "reminder_continuing": "سنذكّرك مرة أخرى بعد {minutes} دقيقة.",
 
         # /today

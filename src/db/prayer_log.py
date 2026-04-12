@@ -1,6 +1,14 @@
 import aiosqlite
 from src.config import DB_PATH, PRAYERS
 
+# Maps stored prayer names back to their canonical PRAYERS-list slot.
+# "Sobh" is Fajr prayed after sunrise (qada); "Jumu'ah" is Friday Dhuhr.
+PRAYER_SLOT_MAP: dict[str, str] = {
+    "Fajr": "Fajr", "Sobh": "Fajr",
+    "Dhuhr": "Dhuhr", "Jumu'ah": "Dhuhr",
+    "Asr": "Asr", "Maghrib": "Maghrib", "Isha": "Isha",
+}
+
 
 async def init_daily_log(user_id: int, date_str: str) -> None:
     """
@@ -35,6 +43,31 @@ async def update_status(user_id: int, date_str: str, prayer: str, status: str) -
         await db.commit()
 
 
+async def rename_and_log(
+    user_id: int, date_str: str, old_prayer: str, new_prayer: str, status: str
+) -> None:
+    """Delete the old_prayer row and upsert a new_prayer row with the given status.
+    Used to store "Sobh" instead of "Fajr" (after sunrise) and "Jumu'ah" instead
+    of "Dhuhr" (Friday Jumu'ah prayer).
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "DELETE FROM prayer_log WHERE user_id = ? AND date = ? AND prayer = ?",
+            (user_id, date_str, old_prayer),
+        )
+        await db.execute(
+            """
+            INSERT INTO prayer_log (user_id, date, prayer, status)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id, date, prayer) DO UPDATE SET
+                status    = excluded.status,
+                logged_at = datetime('now')
+            """,
+            (user_id, date_str, new_prayer, status),
+        )
+        await db.commit()
+
+
 async def get_status(user_id: int, date_str: str, prayer: str) -> str | None:
     """Return 'pending', 'prayed', 'missed', or None if no row yet."""
     async with aiosqlite.connect(DB_PATH) as db:
@@ -48,7 +81,12 @@ async def get_status(user_id: int, date_str: str, prayer: str) -> str | None:
 
 
 async def get_daily_log(user_id: int, date_str: str) -> list[dict]:
-    """Return list of {prayer, status} for the day, ordered by PRAYERS order."""
+    """Return list of {prayer, status} for the day, ordered by PRAYERS order.
+
+    Each row's 'prayer' is the actual stored name (e.g. "Sobh" or "Jumu'ah"),
+    not always the canonical slot name.  Slot mapping ensures exactly 5 rows
+    are returned even when alternative names are stored.
+    """
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
@@ -56,8 +94,14 @@ async def get_daily_log(user_id: int, date_str: str) -> list[dict]:
             (user_id, date_str),
         ) as cur:
             rows = await cur.fetchall()
-            by_prayer = {r["prayer"]: r["status"] for r in rows}
-            return [{"prayer": p, "status": by_prayer.get(p, "pending")} for p in PRAYERS]
+            by_slot: dict[str, dict] = {}
+            for r in rows:
+                slot = PRAYER_SLOT_MAP.get(r["prayer"], r["prayer"])
+                by_slot[slot] = {"prayer": r["prayer"], "status": r["status"]}
+            return [
+                by_slot.get(p, {"prayer": p, "status": "pending"})
+                for p in PRAYERS
+            ]
 
 
 async def get_monthly_log(user_id: int, year: int, month: int) -> list[dict]:

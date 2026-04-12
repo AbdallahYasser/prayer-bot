@@ -148,11 +148,12 @@ async def today(user_id: int = Depends(auth.get_current_user)):
     log   = await db.get_daily_log(user_id, today_str)
 
     prayers = []
-    for prayer in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]:
+    for slot in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]:
+        entry = log.get(slot) or {"name": slot, "status": "pending"}
         prayers.append({
-            "name":   prayer,
-            "time":   (times or {}).get(prayer),
-            "status": log.get(prayer, "pending"),
+            "name":   entry["name"],     # actual stored name: "Sobh", "Jumu'ah", etc.
+            "time":   (times or {}).get(slot),
+            "status": entry["status"],
         })
 
     return {

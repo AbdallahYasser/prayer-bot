@@ -13,6 +13,22 @@ const COLORS = {
 };
 
 const PRAYERS   = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+// Maps stored prayer names to their canonical slot in PRAYERS.
+// "Sobh" = Fajr prayed after sunrise (qada); "Jumu'ah" = Friday Dhuhr.
+const PRAYER_SLOTS = {
+  Fajr: 'Fajr', Sobh: 'Fajr',
+  Dhuhr: 'Dhuhr', "Jumu'ah": 'Dhuhr',
+  Asr: 'Asr', Maghrib: 'Maghrib', Isha: 'Isha',
+};
+
+// Arabic display names for all prayer variants.
+const PRAYER_NAMES_AR_FULL = {
+  Fajr: 'الفجر', Sobh: 'الصبح',
+  Dhuhr: 'الظهر', "Jumu'ah": 'الجمعة',
+  Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء',
+};
+
 const DAYS_AR   = ['سب', 'أح', 'إث', 'ثلا', 'أرب', 'خم', 'جم'];
 const DAYS_EN   = ['Sa', 'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr'];
 const MONTHS_EN = ['January','February','March','April','May','June',
@@ -197,10 +213,6 @@ function pct(prayed, total) {
 
 // ── Today ─────────────────────────────────────────────────────────────────────
 
-const PRAYER_NAMES_AR = {
-  Fajr: 'الفجر', Dhuhr: 'الظهر', Asr: 'العصر', Maghrib: 'المغرب', Isha: 'العشاء',
-};
-
 async function loadToday() {
   const section = document.getElementById('today-section');
   try {
@@ -224,12 +236,13 @@ async function loadToday() {
     }
 
     // /api/today returns prayers as an array [{name, time, status}]
-    // Convert to the object format showDayData uses, and keep times separately
+    // name may be "Sobh" or "Jumu'ah" — normalize to slot-keyed dicts.
     const prayersObj = {};
     const timesObj   = {};
     for (const p of data.prayers) {
-      prayersObj[p.name] = p.status;
-      timesObj[p.name]   = p.time;
+      const slot = PRAYER_SLOTS[p.name] || p.name;
+      prayersObj[slot] = { actual: p.name, status: p.status };
+      timesObj[slot]   = p.time;
     }
     // Don't pass data.date_display — it's always English from the API.
     // Let showDayData compute the date in the user's language instead.
@@ -340,7 +353,15 @@ async function loadMonthDetail(yearMonth) {
   document.getElementById('month-detail-title').textContent = title;
 
   monthData = {};
-  for (const d of data.days) monthData[d.date] = d;
+  for (const d of data.days) {
+    // Normalize prayers to {slot: {actual, status}} so showDayData can use actual names.
+    const normalized = {};
+    for (const [name, status] of Object.entries(d.prayers || {})) {
+      const slot = PRAYER_SLOTS[name] || name;
+      normalized[slot] = { actual: name, status };
+    }
+    monthData[d.date] = { ...d, prayers: normalized };
+  }
 
   const firstDow  = new Date(y, m - 1, 1).getDay(); // 0=Sun…6=Sat
   const satFirst  = (firstDow + 1) % 7;
@@ -433,14 +454,19 @@ function showDayData(dateStr, entry, dateDisplay) {
   const prayers = entry.prayers || {};
   const times   = entry.times   || {};
 
-  for (const p of PRAYERS) {
-    const status = prayers[p];
+  for (const slot of PRAYERS) {
+    // prayers[slot] is {actual, status} (normalized in loadToday/loadMonthDetail)
+    // or may be a plain string status for old callers — handle both.
+    const cell = prayers[slot];
+    const actualName = (cell && typeof cell === 'object') ? (cell.actual || slot) : slot;
+    const status     = (cell && typeof cell === 'object') ? cell.status : (cell || undefined);
+
     const row = document.createElement('div');
     row.className = `prayer-row status-${status || 'pending'}`;
 
     const icon = status === 'prayed' ? '✅' : status === 'missed' ? '❌' : '⏳';
-    const name = lang === 'ar' ? (PRAYER_NAMES_AR[p] || p) : p;
-    const time = times[p];
+    const name = lang === 'ar' ? (PRAYER_NAMES_AR_FULL[actualName] || actualName) : actualName;
+    const time = times[slot];
 
     row.innerHTML = `
       <span class="prayer-row-status">${icon}</span>
@@ -563,7 +589,7 @@ function mockApi(url) {
       const dateStr = `${y}-${m}-${String(i).padStart(2, '0')}`;
       const count = Math.floor(Math.random() * 6);
       const prayers = {};
-      PRAYERS.forEach((p, idx) => { prayers[p] = idx < count ? "prayed" : (idx < count + 1 ? "missed" : "pending"); });
+      PRAYERS.forEach((p, idx) => { prayers[p] = idx < count ? "prayed" : (idx < count + 1 ? "missed" : "pending"); }); // mock uses canonical names
       days.push({ date: dateStr, prayed_count: count, total: 5, prayers });
     }
     data = { month: ym, days };

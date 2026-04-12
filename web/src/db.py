@@ -123,7 +123,17 @@ async def get_prayer_times(user_id: int, date_str: str) -> dict | None:
 
 
 async def get_daily_log(user_id: int, date_str: str) -> dict:
-    """Prayer statuses for a given date: {prayer_name: status}"""
+    """Prayer statuses for a given date: {canonical_slot: {name, status}}.
+
+    Returns a dict keyed by canonical slot ("Fajr", "Dhuhr", ...) where each
+    value is the actual stored name and status.  Handles alternative names:
+    "Sobh" (Fajr after sunrise) and "Jumu'ah" (Friday Dhuhr).
+    """
+    _slot_map = {
+        "Fajr": "Fajr", "Sobh": "Fajr",
+        "Dhuhr": "Dhuhr", "Jumu'ah": "Dhuhr",
+        "Asr": "Asr", "Maghrib": "Maghrib", "Isha": "Isha",
+    }
     async with aiosqlite.connect(_db_uri(), uri=True) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
@@ -131,7 +141,11 @@ async def get_daily_log(user_id: int, date_str: str) -> dict:
             (user_id, date_str),
         ) as cur:
             rows = await cur.fetchall()
-            return {r["prayer"]: r["status"] for r in rows}
+            by_slot: dict[str, dict] = {}
+            for r in rows:
+                slot = _slot_map.get(r["prayer"], r["prayer"])
+                by_slot[slot] = {"name": r["prayer"], "status": r["status"]}
+            return by_slot
 
 
 async def get_stats(user_id: int, tz_str: str = "UTC") -> dict:

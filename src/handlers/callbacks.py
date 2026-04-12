@@ -2,11 +2,12 @@
 Inline keyboard callback handlers.
 
 Callback data formats (all < 64 bytes):
-  pray:yes:{prayer}:{date_str}   — user confirms they prayed
-  pray:no:{prayer}:{date_str}    — user says they didn't pray
-  settings:lang:{lang}           — change language
-  settings:method:{n}            — change calculation method
-  settings:reminders:{0|1}       — toggle reminders
+  pray:yes:{prayer}:{date_str}    — user confirms they prayed (canonical name)
+  pray:jumuah:{prayer}:{date_str} — Friday: user attended Jumu'ah (stores "Jumu'ah")
+  pray:no:{prayer}:{date_str}     — user says they didn't pray
+  settings:lang:{lang}            — change language
+  settings:method:{n}             — change calculation method
+  settings:reminders:{0|1}        — toggle reminders
 """
 
 import logging
@@ -72,12 +73,30 @@ async def handle_prayer_callback(cb: CallbackQuery) -> None:
                     datetime.datetime.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
                 )
                 if datetime.datetime.now(tz) >= sunrise_aware:
+                    # Rename the DB row from "Fajr" to "Sobh" (qada/makeup)
+                    await db_log.rename_and_log(user_id, date_str, "Fajr", "Sobh", "prayed")
                     confirmed_text = t(lang, "prayer_confirmed_qadaa")
 
         try:
             await cb.message.edit_text(confirmed_text)
         except Exception:
             pass  # message may be too old to edit
+
+        await cb.answer()
+
+    elif answer == "jumuah":
+        # Friday Jumu'ah: rename Dhuhr row → "Jumu'ah" and mark prayed
+        task = state.active_reminder_tasks.pop(task_key, None)
+        if task and not task.done():
+            task.cancel()
+
+        await db_log.rename_and_log(user_id, date_str, "Dhuhr", "Jumu'ah", "prayed")
+        confirmed_text = t(lang, "prayer_confirmed_jumuah")
+
+        try:
+            await cb.message.edit_text(confirmed_text)
+        except Exception:
+            pass
 
         await cb.answer()
 

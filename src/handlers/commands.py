@@ -382,14 +382,14 @@ async def _send_today(message: Message, user: dict) -> None:
 
 
 def _build_today_text(times: dict, daily_log: list, lang: str) -> str:
-    status_map = {row["prayer"]: row["status"] for row in daily_log}
     icon_map = {"prayed": "✅", "missed": "❌", "pending": "⏳"}
     lines = []
-    for prayer in PRAYERS:
-        time_str = times.get(prayer, "—")
-        status = status_map.get(prayer, "pending")
-        icon = icon_map.get(status, "⏳")
-        p_name = prayer_name(prayer, lang)
+    # daily_log is ordered by PRAYERS; each row has actual stored name (e.g. "Sobh", "Jumu'ah")
+    for slot, row in zip(PRAYERS, daily_log):
+        actual = row["prayer"]           # e.g. "Sobh", "Jumu'ah", "Fajr", "Dhuhr"
+        time_str = times.get(slot, "—") # times keyed by canonical slot name
+        icon = icon_map.get(row["status"], "⏳")
+        p_name = prayer_name(actual, lang)
         lines.append(f"{icon} <b>{p_name:<8}</b>  {time_str}")
     return "\n".join(lines)
 

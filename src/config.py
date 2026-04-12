@@ -15,7 +15,9 @@ PRAYERS: list[str] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
 PRAYER_NAMES: dict[str, dict[str, str]] = {
     "Fajr":    {"en": "Fajr",    "ar": "الفجر"},
+    "Sobh":    {"en": "Sobh",    "ar": "الصبح"},
     "Dhuhr":   {"en": "Dhuhr",   "ar": "الظهر"},
+    "Jumu'ah": {"en": "Jumu'ah", "ar": "الجمعة"},
     "Asr":     {"en": "Asr",     "ar": "العصر"},
     "Maghrib": {"en": "Maghrib", "ar": "المغرب"},
     "Isha":    {"en": "Isha",    "ar": "العشاء"},
