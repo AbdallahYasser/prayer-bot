@@ -130,7 +130,15 @@ async function showDashboard() {
 
   // Header
   document.getElementById('user-name').textContent = currentUser.first_name;
-  document.getElementById('user-location').textContent = `${currentUser.city}, ${currentUser.country}`;
+  // Location bar — only show if city/country are actually set
+  const loc = [currentUser.city, currentUser.country].filter(Boolean).join(', ');
+  document.getElementById('user-location').textContent = loc;
+  if (loc) {
+    document.getElementById('location-text').textContent = loc;
+    show('location-bar');
+  } else {
+    hide('location-bar');
+  }
   document.getElementById('lang-toggle').textContent = currentUser.language === 'ar' ? 'EN' : 'AR';
   document.getElementById('reminder-bell').textContent = currentUser.reminders_on ? '🔔' : '🔕';
 
@@ -299,8 +307,17 @@ async function changeMonth(delta) {
 async function loadMonthDetail(yearMonth) {
   currentMonth = yearMonth;
 
-  const res  = await api(`/api/month?m=${yearMonth}`);
-  const data = await res.json();
+  let data;
+  try {
+    const res = await api(`/api/month?m=${yearMonth}`);
+    data = await res.json();
+  } catch {
+    document.getElementById('month-grid').innerHTML =
+      `<p style="color:#64748b;font-size:13px;grid-column:1/-1;padding:16px 0">
+        ${currentUser.language === 'ar' ? 'تعذّر تحميل البيانات' : 'Could not load data'}
+      </p>`;
+    return;
+  }
 
   const [y, m] = yearMonth.split('-').map(Number);
   const lang   = currentUser.language;
@@ -349,6 +366,7 @@ async function loadMonthDetail(yearMonth) {
       cell.classList.add('future');
       cell.innerHTML = `<span class="day-num">${day}</span>`;
     } else if (!entry) {
+      cell.classList.add('no-data');
       cell.style.background = COLORS.none;
       cell.innerHTML = `<span class="day-num">${day}</span>`;
     } else {
