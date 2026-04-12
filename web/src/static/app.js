@@ -124,17 +124,30 @@ async function showDashboard() {
   hide('login-screen');
   show('dashboard');
 
+  // Set currentMonth FIRST — before any async calls that could throw.
+  // If this isn't set, openCalendar() silently does nothing.
+  if (!currentMonth) {
+    currentMonth = localToday().slice(0, 7);   // "YYYY-MM"
+  }
+
   // Reset defaults
   document.body.setAttribute('dir', 'ltr');
   document.documentElement.setAttribute('lang', 'en');
 
   // Header
   document.getElementById('user-name').textContent = currentUser.first_name;
-  // Location bar — only show if city/country are actually set
+  // Location bar.
+  // Bot stores EITHER lat/lng (GPS) OR city/country (text) — never both.
+  // When GPS is used, city/country are NULL → fall back to extracting the
+  // city name from the timezone string (e.g. "Africa/Cairo" → "Cairo").
   const loc = [currentUser.city, currentUser.country].filter(Boolean).join(', ');
-  document.getElementById('user-location').textContent = loc;
-  if (loc) {
-    document.getElementById('location-text').textContent = loc;
+  const tzFallback = (!loc && currentUser.timezone && currentUser.timezone !== 'UTC')
+    ? currentUser.timezone.split('/').pop().replace(/_/g, ' ')
+    : '';
+  const locationLabel = loc || tzFallback;
+  document.getElementById('user-location').textContent = locationLabel;
+  if (locationLabel) {
+    document.getElementById('location-text').textContent = locationLabel;
     show('location-bar');
   } else {
     hide('location-bar');
@@ -158,11 +171,8 @@ async function showDashboard() {
 
   await loadStats();
   await loadToday();
-  await loadHeatmap();
-
-  if (!currentMonth) {
-    currentMonth = localToday().slice(0, 7);  // "YYYY-MM"
-  }
+  // loadHeatmap() is intentionally NOT called here — the heatmap section
+  // is hidden. It will be called when the section is revealed.
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
