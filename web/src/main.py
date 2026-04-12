@@ -189,7 +189,15 @@ async def month(m: str | None = None, user_id: int = Depends(auth.get_current_us
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return (STATIC_DIR / "index.html").read_text()
+    content = (STATIC_DIR / "index.html").read_text()
+    return HTMLResponse(content=content, headers={"Cache-Control": "no-store"})
 
 
-app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+
+app.mount("/", NoCacheStaticFiles(directory=str(STATIC_DIR), html=True), name="static")
