@@ -6,7 +6,12 @@ Notifications: pre/post deploy commands send Telegram messages via the prayer bo
 """
 import datetime
 import os
+import time
 from pathlib import Path
+
+# Set once when the container starts — rotates on every Coolify deploy.
+# Injected into asset URLs to bust Cloudflare's edge cache automatically.
+_DEPLOY_TS = str(int(time.time()))
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -190,6 +195,10 @@ async def month(m: str | None = None, user_id: int = Depends(auth.get_current_us
 @app.get("/", response_class=HTMLResponse)
 async def index():
     content = (STATIC_DIR / "index.html").read_text()
+    # Inject deploy timestamp into local asset URLs so Cloudflare sees a new
+    # cache key on every deploy and is forced to fetch from origin.
+    content = content.replace('src="./app.js"',      f'src="./app.js?v={_DEPLOY_TS}"')
+    content = content.replace('href="./style.css"',  f'href="./style.css?v={_DEPLOY_TS}"')
     return HTMLResponse(content=content, headers={"Cache-Control": "no-store"})
 
 
