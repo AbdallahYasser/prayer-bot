@@ -6,7 +6,7 @@ Usage: t(lang, "key") or t(lang, "key").format(prayer="Fajr", time="04:32")
 STRINGS: dict[str, dict[str, str]] = {
     "en": {
         # Onboarding
-        "private_bot": "🔒 This bot is private.",
+        "private_bot": "🔒 This bot is private.\nYour Telegram ID: <code>{user_id}</code>\nSend this to the admin to request access.",
         "welcome": (
             "🕌 <b>Welcome to Prayer Bot!</b>\n\n"
             "I'll remind you of the 5 daily prayers and help you track your progress.\n\n"
@@ -94,7 +94,7 @@ STRINGS: dict[str, dict[str, str]] = {
 
     "ar": {
         # Onboarding
-        "private_bot": "🔒 هذا البوت خاص.",
+        "private_bot": "🔒 هذا البوت خاص.\nمعرّفك في تيليغرام: <code>{user_id}</code>\nأرسله للمسؤول لطلب الوصول.",
         "welcome": (
             "🕌 <b>أهلاً بك في بوت الصلاة!</b>\n\n"
             "سأذكّرك بمواقيت الصلوات الخمس ويساعدك على متابعة تقدّمك.\n\n"

@@ -27,7 +27,12 @@ router = Router()
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
     if state.allowed_users and message.from_user.id not in state.allowed_users:
-        await message.answer(t("en", "private_bot"))
+        lc = (message.from_user.language_code or "").lower()
+        lang = "ar" if lc.startswith("ar") else "en"
+        await message.answer(
+            t(lang, "private_bot").format(user_id=message.from_user.id),
+            parse_mode="HTML",
+        )
         return
 
     user_id = message.from_user.id
