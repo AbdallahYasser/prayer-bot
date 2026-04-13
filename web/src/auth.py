@@ -6,6 +6,7 @@ import hmac
 import os
 import time
 
+import aiosqlite
 from jose import JWTError, jwt
 from fastapi import Cookie, HTTPException
 
@@ -13,9 +14,6 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
 ALGORITHM = "HS256"
 SESSION_DAYS = 30
-
-_raw_allowed = os.getenv("ALLOWED_USERS", "")
-ALLOWED_USERS: set[int] = {int(x.strip()) for x in _raw_allowed.split(",") if x.strip().isdigit()}
 
 
 def verify_telegram_hash(data: dict) -> bool:
@@ -41,6 +39,20 @@ def verify_telegram_hash(data: dict) -> bool:
 def create_session_token(user_id: int) -> str:
     exp = int(time.time()) + SESSION_DAYS * 86400
     return jwt.encode({"user_id": user_id, "exp": exp}, SECRET_KEY, algorithm=ALGORITHM)
+
+
+async def is_user_allowed(user_id: int) -> bool:
+    """Return True if the whitelist is empty (bot is public) or user_id is in it."""
+    from web.src.db import _db_uri
+    async with aiosqlite.connect(_db_uri(), uri=True) as db:
+        async with db.execute("SELECT COUNT(*) FROM allowed_users") as cur:
+            total = (await cur.fetchone())[0]
+        if total == 0:
+            return True  # empty whitelist = public bot
+        async with db.execute(
+            "SELECT 1 FROM allowed_users WHERE user_id = ? LIMIT 1", (user_id,)
+        ) as cur:
+            return await cur.fetchone() is not None
 
 
 def get_current_user(session: str | None = Cookie(default=None)) -> int:

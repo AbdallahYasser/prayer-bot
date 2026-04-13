@@ -17,7 +17,8 @@ from aiogram.types import CallbackQuery
 
 from src import state
 from src.localization import t, prayer_name
-from src.config import ALLOWED_USERS, CALC_METHODS, ISHA_WINDOW_OPTIONS, REMINDER_INTERVALS
+from src.config import CALC_METHODS, ISHA_WINDOW_OPTIONS, REMINDER_INTERVALS
+from src import state
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -25,7 +26,7 @@ router = Router()
 
 @router.callback_query(F.data.startswith("pray:"))
 async def handle_prayer_callback(cb: CallbackQuery) -> None:
-    if ALLOWED_USERS and cb.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and cb.from_user.id not in state.allowed_users:
         await cb.answer()
         return
 
@@ -111,7 +112,7 @@ async def handle_prayer_callback(cb: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("settings:"))
 async def handle_settings_callback(cb: CallbackQuery) -> None:
-    if ALLOWED_USERS and cb.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and cb.from_user.id not in state.allowed_users:
         await cb.answer()
         return
 

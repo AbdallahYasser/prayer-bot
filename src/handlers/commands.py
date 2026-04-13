@@ -13,7 +13,8 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKey
 
 from src import state
 from src.localization import t, prayer_name
-from src.config import ALLOWED_USERS, PRAYERS, CALC_METHODS
+from src.config import PRAYERS, CALC_METHODS
+from src import state
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -25,7 +26,7 @@ router = Router()
 
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         await message.answer(t("en", "private_bot"))
         return
 
@@ -62,7 +63,7 @@ async def cmd_start(message: Message) -> None:
 
 @router.message(Command("setlocation"))
 async def cmd_setlocation(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     user_id = message.from_user.id
@@ -82,7 +83,7 @@ async def cmd_setlocation(message: Message) -> None:
 
 @router.message(Command("today"))
 async def cmd_today(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     from src.db import users as db_users
@@ -102,7 +103,7 @@ async def cmd_today(message: Message) -> None:
 
 @router.message(Command("progress"))
 async def cmd_progress(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     from src.db import users as db_users
@@ -178,7 +179,7 @@ async def cmd_progress(message: Message) -> None:
 
 @router.message(Command("stats"))
 async def cmd_stats(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     from src.db import users as db_users
@@ -216,7 +217,7 @@ async def cmd_stats(message: Message) -> None:
 
 @router.message(Command("settings"))
 async def cmd_settings(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     from src.db import users as db_users
@@ -238,7 +239,7 @@ async def cmd_settings(message: Message) -> None:
 
 @router.message(Command("pause"))
 async def cmd_pause(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     user_id = message.from_user.id
@@ -275,7 +276,7 @@ async def cmd_pause(message: Message) -> None:
 
 @router.message(Command("resume"))
 async def cmd_resume(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     user_id = message.from_user.id
@@ -321,7 +322,7 @@ async def cmd_resume(message: Message) -> None:
 
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     from src.db import users as db_users

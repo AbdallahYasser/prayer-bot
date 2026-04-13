@@ -7,9 +7,17 @@ BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
 DB_PATH: str = os.getenv("DB_PATH", "/app/data/prayer_bot.db")
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-# Comma-separated Telegram user IDs allowed to use the bot
+# Comma-separated Telegram user IDs allowed to use the bot.
+# Used only to seed the allowed_users DB table on first run.
 _raw = os.getenv("ALLOWED_USERS", "")
 ALLOWED_USERS: set[int] = {int(x.strip()) for x in _raw.split(",") if x.strip().isdigit()}
+
+# Telegram user ID of the bot admin (can run /adduser, /removeuser, /listusers).
+ADMIN_USER_ID: int | None = (
+    int(os.getenv("ADMIN_USER_ID"))
+    if os.getenv("ADMIN_USER_ID", "").isdigit()
+    else None
+)
 
 PRAYERS: list[str] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 

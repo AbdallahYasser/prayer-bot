@@ -12,7 +12,6 @@ from aiogram.types import Message, ReplyKeyboardRemove
 
 from src import state
 from src.localization import t
-from src.config import ALLOWED_USERS
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -110,7 +109,7 @@ async def _apply_location(message: Message, lat: float | None, lng: float | None
 @router.message(F.location)
 async def handle_location_share(message: Message) -> None:
     """Handle Telegram native location share (GPS)."""
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     await _apply_location(
@@ -128,7 +127,7 @@ async def handle_text_input(message: Message) -> None:
     Handle plain text when user is in location-setup flow.
     Expected format: "Cairo Egypt" or "Cairo, Egypt"
     """
-    if ALLOWED_USERS and message.from_user.id not in ALLOWED_USERS:
+    if state.allowed_users and message.from_user.id not in state.allowed_users:
         return
 
     user_id = message.from_user.id

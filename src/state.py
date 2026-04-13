@@ -13,3 +13,7 @@ onboarding_state: dict[int, dict] = {}
 
 # Key: user_id  →  {"step": "awaiting_method" | ...}
 settings_state: dict[int, dict] = {}
+
+# Whitelist: user IDs allowed to use the bot. Empty set = bot is public.
+# Loaded from the allowed_users DB table at startup; updated live by admin commands.
+allowed_users: set[int] = set()

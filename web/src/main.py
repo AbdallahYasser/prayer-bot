@@ -40,7 +40,7 @@ async def telegram_auth(request: Request, response: Response):
 
     user_id = int(data["id"])
 
-    if auth.ALLOWED_USERS and user_id not in auth.ALLOWED_USERS:
+    if not await auth.is_user_allowed(user_id):
         raise HTTPException(status_code=403, detail="Access denied")
 
     token = auth.create_session_token(user_id)
