@@ -52,6 +52,17 @@ async def _apply_location(message: Message, lat: float | None, lng: float | None
     from src.services import aladhan
 
     user_id = message.from_user.id
+
+    # Ensure user record exists — prevents silent UPDATE failure if /start was skipped
+    lc = (message.from_user.language_code or "").lower()
+    lang_default = "ar" if lc.startswith("ar") else "en"
+    await db_users.upsert_user(
+        user_id=user_id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
+        language=lang_default,
+    )
+
     user = await db_users.get_user(user_id)
     lang = user.get("language", "en") if user else "en"
     method = user.get("calc_method", 5) if user else 5
@@ -76,6 +87,9 @@ async def _apply_location(message: Message, lat: float | None, lng: float | None
     else:
         await db_users.update_location_city(user_id, city, country, timezone)
 
+    # Clear onboarding state now — location is saved; don't leave user stuck if later steps fail
+    state.onboarding_state.pop(user_id, None)
+
     # Now use correct timezone for today's date
     import pytz
     try:
@@ -84,16 +98,15 @@ async def _apply_location(message: Message, lat: float | None, lng: float | None
         tz = pytz.UTC
     today_str = datetime.datetime.now(tz).strftime("%Y-%m-%d")
 
-    # Cache times and init log
-    await db_pt.upsert_prayer_times(user_id, today_str, result)
-    await db_log.init_daily_log(user_id, today_str)
-    daily_log = await db_log.get_daily_log(user_id, today_str)
-
-    # Reschedule
-    await sched.reschedule_user_today(user_id)
-
-    # Clear onboarding state
-    state.onboarding_state.pop(user_id, None)
+    # Cache times, init log, reschedule — non-critical; don't block the success reply
+    daily_log = []
+    try:
+        await db_pt.upsert_prayer_times(user_id, today_str, result)
+        await db_log.init_daily_log(user_id, today_str)
+        daily_log = await db_log.get_daily_log(user_id, today_str)
+        await sched.reschedule_user_today(user_id)
+    except Exception as e:
+        logger.warning("Post-location-save error for user %d: %s", user_id, e)
 
     # Reply
     today_summary = _format_today_times(result, daily_log, lang)
